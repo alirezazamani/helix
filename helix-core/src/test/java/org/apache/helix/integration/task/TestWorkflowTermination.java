@@ -26,10 +26,13 @@ import javax.management.ObjectName;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import org.apache.helix.HelixAdmin;
 import org.apache.helix.TestHelper;
+import org.apache.helix.model.IdealState;
 import org.apache.helix.model.MasterSlaveSMD;
 import org.apache.helix.monitoring.mbeans.MonitorDomainNames;
 import org.apache.helix.task.JobConfig;
+import org.apache.helix.task.JobContext;
 import org.apache.helix.task.JobQueue;
 import org.apache.helix.task.TaskState;
 import org.apache.helix.task.TaskUtil;
@@ -47,6 +50,7 @@ public class TestWorkflowTermination extends TaskTestBase {
   private final static String JOB_NAME = "TestJob";
   private final static String WORKFLOW_TYPE = "DEFAULT";
   private static final MBeanServer beanServer = ManagementFactory.getPlatformMBeanServer();
+  private HelixAdmin _admin;
 
   @BeforeClass
   public void beforeClass() throws Exception {
@@ -55,6 +59,7 @@ public class TestWorkflowTermination extends TaskTestBase {
     _numPartitions = 5;
     _numReplicas = 3;
     super.beforeClass();
+    _admin = _gSetupTool.getClusterManagementTool();
   }
 
   private JobConfig.Builder createJobConfigBuilder(String workflow, boolean shouldJobFail,
@@ -98,7 +103,7 @@ public class TestWorkflowTermination extends TaskTestBase {
   }
 
   @Test
-  public void testWorkflowRunningTimeout() throws InterruptedException {
+  public void testWorkflowRunningTimeout() throws Exception {
     String workflowName = TestHelper.getTestMethodName();
     String notStartedJobName = JOB_NAME + "-NotStarted";
     long workflowExpiry = 2000; // 2sec expiry time
@@ -133,7 +138,7 @@ public class TestWorkflowTermination extends TaskTestBase {
   }
 
   @Test
-  public void testWorkflowPausedTimeout() throws InterruptedException {
+  public void testWorkflowPausedTimeout() throws Exception {
     String workflowName = TestHelper.getTestMethodName();
     long workflowExpiry = 2000; // 2sec expiry time
     long timeout = 5000;
@@ -253,12 +258,24 @@ public class TestWorkflowTermination extends TaskTestBase {
         getJobNameToPoll(workflowName, job4));
   }
 
-  private void verifyWorkflowCleanup(String workflowName, String... jobNames) {
-    Assert.assertNull(_driver.getWorkflowConfig(workflowName));
-    Assert.assertNull(_driver.getWorkflowContext(workflowName));
+  private void verifyWorkflowCleanup(String workflowName, String... jobNames) throws Exception {
+    // Check that WorkflowConfig, WorkflowContext, and IdealState are indeed deleted for this
+    // workflow.
+    boolean isWorkflowDeleted = TestHelper.verify(() -> {
+      WorkflowConfig wfcfg = _driver.getWorkflowConfig(workflowName);
+      WorkflowContext wfctx = _driver.getWorkflowContext(workflowName);
+      IdealState is = _admin.getResourceIdealState(CLUSTER_NAME, workflowName);
+      return (wfcfg == null && wfctx == null && is == null);
+    }, TestHelper.WAIT_DURATION);
+    Assert.assertTrue(isWorkflowDeleted);
+
     for (String job : jobNames) {
-      Assert.assertNull(_driver.getJobConfig(job));
-      Assert.assertNull(_driver.getJobContext(job));
+      boolean isJobDeleted = TestHelper.verify(() -> {
+        JobConfig jobcfg = _driver.getJobConfig(job);
+        JobContext jobctx = _driver.getJobContext(job);
+        return (jobcfg == null && jobctx == null);
+      }, TestHelper.WAIT_DURATION);
+      Assert.assertTrue(isJobDeleted);
     }
   }
 
