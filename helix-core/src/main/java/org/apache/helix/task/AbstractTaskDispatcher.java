@@ -111,6 +111,9 @@ public abstract class AbstractTaskDispatcher {
       // TASK_ERROR, ERROR.
       Set<Integer> donePartitions = new TreeSet<>();
       for (int pId : pSet) {
+        if (pId == 188) {
+          int c = 0;
+        }
         final String pName = pName(jobResource, pId);
         TaskPartitionState currState = updateJobContextAndGetTaskCurrentState(currStateOutput,
             jobResource, pId, pName, instance, jobCtx, jobTgtState);

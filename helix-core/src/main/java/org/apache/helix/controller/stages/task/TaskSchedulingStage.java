@@ -248,6 +248,9 @@ public class TaskSchedulingStage extends AbstractBaseStage {
       while (it.hasNext()) {
         String workflowId = it.next()._workflowId;
         Resource resource = resourceMap.get(workflowId);
+        if (workflowId.equals("BulkOperationsQueue_ReputationMeritDB")){
+          int a = 0;
+        }
         // TODO : Resource is null could be workflow just created without any IdealState.
         // Let's remove this check when Helix is independent from IdealState
         if (resource != null) {

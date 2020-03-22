@@ -250,6 +250,9 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
     // Assign new jobs
     while (nextJob != null) {
       String job = nextJob;
+      if (job.equals("BulkOperationsQueue_ReputationMeritDB_BulkLoad-ReputationMeritDB-2019-10-15-09-07-11-4bbf2d58")) {
+        int b = 0;
+      }
       TaskState jobState = workflowCtx.getJobState(job);
       if (jobState != null && !jobState.equals(TaskState.NOT_STARTED)) {
         if (LOG.isDebugEnabled()) {
