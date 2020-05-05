@@ -22,7 +22,7 @@ public class ControllerDebug {
   public static void main(String[] args) throws Exception {
     //    String zkaddress = "zk-lor1-espresso.prod.linkedin.com:12913";
     String zkaddress = "localhost:4185";
-    String clusterName = "ESPRESSO_MT-MD-3";
+    String clusterName = "ESPRESSO-DATA-VALIDATION";
     HelixManager manager = HelixManagerFactory
         .getZKHelixManager(clusterName, "Test", InstanceType.ADMINISTRATOR, zkaddress);
     manager.connect();
@@ -43,7 +43,7 @@ public class ControllerDebug {
     event.addAttribute(AttributeName.helixmanager.name(), manager);
     event.addAttribute(AttributeName.changeContext.name(), new NotificationContext(manager));
     //    cache.setTaskCache(true);
-    event.addAttribute(AttributeName.ControllerDataProvider.name(), new WorkflowControllerDataProvider("ESPRESSO_MT-MD-3"));
+    event.addAttribute(AttributeName.ControllerDataProvider.name(), new WorkflowControllerDataProvider("ESPRESSO-DATA-VALIDATION"));
     ResourceComputationStage computationStage = new ResourceComputationStage();
     ResourceValidationStage validationStage = new ResourceValidationStage();
     CurrentStateComputationStage currentStateComputationStage = new CurrentStateComputationStage();

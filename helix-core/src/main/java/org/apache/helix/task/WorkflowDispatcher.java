@@ -186,6 +186,10 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
       return;
     }
 
+    if (workflow.equals("TableComparisonQueue")) {
+      int a = 0;
+    }
+
     if (!isWorkflowReadyForSchedule(workflowCfg)) {
       LOG.info("Workflow " + workflow + " is not ready to schedule");
       // set the timer to trigger future schedule
