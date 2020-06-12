@@ -55,6 +55,6 @@ public class TestUnregisteredCommand extends TaskTestBase {
     Assert.assertEquals(_driver.getJobContext(TaskUtil.getNamespacedJobName(workflowName, "JOB1"))
         .getPartitionState(0), TaskPartitionState.ERROR);
     Assert.assertEquals(_driver.getJobContext(TaskUtil.getNamespacedJobName(workflowName, "JOB1"))
-        .getPartitionNumAttempts(0), 1);
+        .getPartitionNumAttempts(0), 2);
   }
 }
