@@ -276,8 +276,7 @@ public abstract class AbstractTaskDispatcher {
           // After all tasks are aborted, they will be dropped, because of job timeout.
           if (jobState != TaskState.TIMED_OUT && jobState != TaskState.TIMING_OUT) {
             if (jobCtx.getPartitionNumAttempts(pId) >= jobCfg.getMaxAttemptsPerTask()
-                || currState.equals(TaskPartitionState.TASK_ABORTED)
-                || currState.equals(TaskPartitionState.ERROR)) {
+                || currState.equals(TaskPartitionState.TASK_ABORTED)) {
               skippedPartitions.add(pId);
               partitionsToDropFromIs.add(pId);
               if (LOG.isDebugEnabled()) {
@@ -754,7 +753,7 @@ public abstract class AbstractTaskDispatcher {
 
   /**
    * Returns a filtered Iterable of tasks. To filter tasks in this context means to only allow tasks
-   * whose contexts are either null or in STOPPED, TIMED_OUT, TASK_ERROR, or DROPPED state because
+   * whose contexts are either null or in STOPPED, TIMED_OUT, TASK_ERROR, ERROR, or DROPPED state because
    * only the
    * tasks whose contexts are in these states are eligible to be assigned or re-tried.
    * Also, for those tasks in non-terminal states whose previously assigned instances are no longer
@@ -769,9 +768,11 @@ public abstract class AbstractTaskDispatcher {
     for (int partitionNumber : allPartitions) {
       TaskPartitionState state = jobContext.getPartitionState(partitionNumber);
       // Allow tasks eligible for scheduling
+      // Here we consider ERROR state as retriable, however this is different from regular resources
+      // where ERROR state needs to get reset manually.
       if (state == null || state == TaskPartitionState.STOPPED
           || state == TaskPartitionState.TIMED_OUT || state == TaskPartitionState.TASK_ERROR
-          || state == TaskPartitionState.DROPPED) {
+          || state == TaskPartitionState.ERROR || state == TaskPartitionState.DROPPED) {
         filteredTasks.add(partitionNumber);
       }
       // Allow tasks whose assigned instances are no longer live for rescheduling
@@ -799,10 +800,11 @@ public abstract class AbstractTaskDispatcher {
 
   protected static boolean isTaskGivenup(JobContext ctx, JobConfig cfg, int pId) {
     TaskPartitionState state = ctx.getPartitionState(pId);
-    if (state == TaskPartitionState.TASK_ABORTED || state == TaskPartitionState.ERROR) {
+    if (state == TaskPartitionState.TASK_ABORTED) {
       return true;
     }
-    if (state == TaskPartitionState.TIMED_OUT || state == TaskPartitionState.TASK_ERROR) {
+    if (state == TaskPartitionState.TIMED_OUT || state == TaskPartitionState.TASK_ERROR
+        || state == TaskPartitionState.ERROR) {
       return ctx.getPartitionNumAttempts(pId) >= cfg.getMaxAttemptsPerTask();
     }
     return false;
