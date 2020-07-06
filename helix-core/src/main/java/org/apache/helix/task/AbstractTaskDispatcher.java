@@ -185,17 +185,13 @@ public abstract class AbstractTaskDispatcher {
         switch (currState) {
         case RUNNING: {
           TaskPartitionState nextState = TaskPartitionState.RUNNING;
-          if (jobState == TaskState.TIMING_OUT) {
+          if (jobState == TaskState.TIMING_OUT || jobState == TaskState.TIMED_OUT
+              || jobState == TaskState.FAILING || jobState == TaskState.FAILED
+              || jobState == TaskState.ABORTED) {
             nextState = TaskPartitionState.TASK_ABORTED;
           } else if (jobTgtState == TargetState.STOP) {
             nextState = TaskPartitionState.STOPPED;
-          } else if (jobState == TaskState.ABORTED || jobState == TaskState.FAILED
-              || jobState == TaskState.FAILING || jobState == TaskState.TIMED_OUT) {
-            // Drop tasks if parent job is not in progress
-            paMap.put(pId, new PartitionAssignment(instance, TaskPartitionState.DROPPED.name()));
-            break;
           }
-
           paMap.put(pId, new PartitionAssignment(instance, nextState.name()));
           assignedPartitions.get(instance).add(pId);
           if (LOG.isDebugEnabled()) {

@@ -305,7 +305,6 @@ public class JobDispatcher extends AbstractTaskDispatcher {
 
     // Make additional task assignments if needed.
     if (jobState != TaskState.TIMING_OUT && jobState != TaskState.TIMED_OUT
-        && jobState != TaskState.FAILING && jobState != TaskState.FAILED
         && jobTgtState == TargetState.START) {
       handleAdditionalTaskAssignment(currentInstanceToTaskAssignments, excludedInstances,
           jobResource, currStateOutput, jobCtx, jobCfg, workflowConfig, workflowCtx, cache,
