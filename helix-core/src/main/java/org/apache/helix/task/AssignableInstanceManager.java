@@ -31,7 +31,10 @@ import org.apache.helix.controller.stages.CurrentStateOutput;
 import org.apache.helix.model.ClusterConfig;
 import org.apache.helix.model.InstanceConfig;
 import org.apache.helix.model.LiveInstance;
+import org.apache.helix.model.Message;
+import org.apache.helix.model.Partition;
 import org.apache.helix.model.Resource;
+import org.apache.helix.model.StateModelDefinition;
 import org.apache.helix.task.assigner.AssignableInstance;
 import org.apache.helix.task.assigner.TaskAssignResult;
 import org.codehaus.jackson.JsonNode;
@@ -141,6 +144,7 @@ public class AssignableInstanceManager {
 
           String assignedInstance = jobContext.getAssignedParticipant(taskIndex);
           String taskId = jobContext.getTaskIdForPartition(taskIndex);
+          System.out.println("taskID is:" + taskId);
           if (taskId == null) {
             // For targeted tasks, taskId will be null
             // We instead use pName (see FixedTargetTaskAssignmentCalculator)
@@ -182,15 +186,14 @@ public class AssignableInstanceManager {
    * Builds AssignableInstances and restores TaskAssignResults from scratch by reading from
    * CurrentState. It re-computes current quota profile for each AssignableInstance.
    */
-  public void buildAssignableInstancesFromCurrentState (ClusterConfig clusterConfig,
-      Map<String, LiveInstance> liveInstances, Map<String, InstanceConfig> instanceConfigs, CurrentStateOutput currentStateOutput, Map<String, Resource> resourceMap) {
-    // Reset all cached information
-    //_assignableInstanceMap.clear();
-    //_taskAssignResultMap.clear();
+  public void buildAssignableInstancesFromCurrentState(ClusterConfig clusterConfig, TaskDataCache taskDataCache,
+      Map<String, LiveInstance> liveInstances, Map<String, InstanceConfig> instanceConfigs,
+      CurrentStateOutput currentStateOutput, Map<String, Resource> resourceMap) {
+    _assignableInstanceMap.clear();
+    _taskAssignResultMap.clear();
 
     // Create all AssignableInstance objects based on what's in liveInstances
-/*    for (Map.Entry<String, LiveInstance> liveInstanceEntry : liveInstances.entrySet()) {
-
+    for (Map.Entry<String, LiveInstance> liveInstanceEntry : liveInstances.entrySet()) {
       // Prepare instance-specific metadata
       String instanceName = liveInstanceEntry.getKey();
       LiveInstance liveInstance = liveInstanceEntry.getValue();
@@ -204,15 +207,84 @@ public class AssignableInstanceManager {
           new AssignableInstance(clusterConfig, instanceConfig, liveInstance);
       _assignableInstanceMap.put(instanceConfig.getInstanceName(), assignableInstance);
       LOG.debug("AssignableInstance created for instance: {}", instanceName);
-    }*/
-
-    for (Map.Entry<String, AssignableInstance> assignableInstanceEntry: _assignableInstanceMap.entrySet()) {
-      for (Map.Entry<String, Resource> resourceEntry: resourceMap.entrySet()) {
-        String resourceName = resourceEntry.getKey();
-        System.out.println(resourceName + ":" + resourceEntry.getValue().getStateModelDefRef());
-      }
-
     }
+    System.out.println("_assignableInstanceMap " + _assignableInstanceMap.keySet());
+
+    // Update task profiles by traversing all TaskContexts
+    Map<String, JobConfig> jobConfigMap = taskDataCache.getJobConfigMap();
+
+    for (Map.Entry<String, Resource> resourceEntry : resourceMap.entrySet()) {
+      String resourceName = resourceEntry.getKey();
+      if (resourceEntry.getValue().getStateModelDefRef().equals(TaskConstants.STATE_MODEL_NAME)) {
+        JobConfig jobConfig = jobConfigMap.get(resourceName);
+        JobContext jobContext = taskDataCache.getJobContext(resourceName);
+        String quotaType = getQuotaType(jobConfig);
+        Map<Partition, Map<String, String>> currentStateMap = currentStateOutput.getCurrentStateMap(resourceName);
+        for (Map.Entry<Partition, Map<String, String>> currentStateMapEntry: currentStateMap.entrySet()) {
+          String taskId = getTaskID(jobConfig, jobContext, currentStateMapEntry.getKey());
+          for (Map.Entry<String, String> instanceCurrentStateEntry: currentStateMapEntry.getValue().entrySet()) {
+            String assignedInstance = instanceCurrentStateEntry.getKey();
+            String taskState = instanceCurrentStateEntry.getValue();
+            if (taskState.equals(TaskPartitionState.INIT.name()) || taskState.equals(TaskPartitionState.RUNNING.name())) {
+              if (_assignableInstanceMap.containsKey(assignedInstance)) {
+                TaskConfig taskConfig = getTaskConfig(jobConfig, taskId);
+                AssignableInstance assignableInstance = _assignableInstanceMap.get(assignedInstance);
+                TaskAssignResult taskAssignResult =
+                    assignableInstance.restoreTaskAssignResult(taskId, taskConfig, quotaType);
+                if (taskAssignResult.isSuccessful()) {
+                  _taskAssignResultMap.put(taskId, taskAssignResult);
+                  LOG.debug("TaskAssignResult restored for taskId: {}, assigned on instance: {}",
+                      taskId, assignedInstance);
+                }
+              } else {
+                LOG.debug(
+                    "While building AssignableInstance map, discovered that the instance a task is assigned to is no "
+                        + "longer a LiveInstance! TaskAssignResult will not be created and no resource will be taken "
+                        + "up for this task. Job: {}, TaskId: {}, Instance: {}",
+                    jobContext.getName(), taskId, assignedInstance);
+              }
+            }
+          }
+        }
+      }
+    }
+    LOG.info(
+        "AssignableInstanceManager built AssignableInstances from scratch based on contexts in TaskDataCache due to Controller switch or ClusterConfig change.");
+    computeGlobalThreadBasedCapacity();
+  }
+
+  private String getQuotaType(JobConfig jobConfig) {
+    // If jobConfig is null (job has been deleted but participant has not dropped the task yet), use
+    // default quota for the task
+    if (jobConfig == null) {
+      return AssignableInstance.DEFAULT_QUOTA_TYPE;
+    }
+    String quotaType = jobConfig.getJobType();
+    if (quotaType == null) {
+      quotaType = AssignableInstance.DEFAULT_QUOTA_TYPE;
+    }
+    return quotaType;
+  }
+
+  private String getTaskID(JobConfig jobConfig, JobContext jobContext, Partition partition) {
+    if (jobConfig == null || jobContext == null) {
+      return partition.getPartitionName();
+    }
+    int taskIndex = TaskUtil.getPartitionId(partition.getPartitionName());
+    String taskId = jobContext.getTaskIdForPartition(taskIndex);
+    if (taskId == null) {
+      // For targeted tasks, taskId will be null
+      // We instead use pName (see FixedTargetTaskAssignmentCalculator)
+      taskId = String.format("%s_%s", jobConfig.getJobId(), taskIndex);
+    }
+    return taskId;
+  }
+
+  private TaskConfig getTaskConfig (JobConfig jobConfig, String taskId) {
+    if (jobConfig == null){
+      return new TaskConfig(null, null, taskId, null);
+    }
+    return jobConfig.getTaskConfig(taskId);
   }
 
   /**

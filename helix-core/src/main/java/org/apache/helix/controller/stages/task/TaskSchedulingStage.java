@@ -60,8 +60,10 @@ public class TaskSchedulingStage extends AbstractBaseStage {
 
     // Build quota capacity based on Current State
     cache.getAssignableInstanceManager().buildAssignableInstancesFromCurrentState(
-        cache.getClusterConfig(), cache.getLiveInstances(), cache.getInstanceConfigMap(),
+        cache.getClusterConfig(), cache.getTaskDataCache(), cache.getLiveInstances(), cache.getInstanceConfigMap(),
         currentStateOutput, resourceMap);
+
+    cache.getAssignableInstanceManager().logQuotaProfileJSON(false);
 
     // Reset current INIT/RUNNING tasks on participants for throttling
     cache.resetActiveTaskCount(currentStateOutput);
