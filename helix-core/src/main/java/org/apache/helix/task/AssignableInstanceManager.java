@@ -27,9 +27,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.helix.common.caches.TaskDataCache;
+import org.apache.helix.controller.stages.CurrentStateOutput;
 import org.apache.helix.model.ClusterConfig;
 import org.apache.helix.model.InstanceConfig;
 import org.apache.helix.model.LiveInstance;
+import org.apache.helix.model.Resource;
 import org.apache.helix.task.assigner.AssignableInstance;
 import org.apache.helix.task.assigner.TaskAssignResult;
 import org.codehaus.jackson.JsonNode;
@@ -174,6 +176,43 @@ public class AssignableInstanceManager {
     LOG.info(
         "AssignableInstanceManager built AssignableInstances from scratch based on contexts in TaskDataCache due to Controller switch or ClusterConfig change.");
     computeGlobalThreadBasedCapacity();
+  }
+
+  /**
+   * Builds AssignableInstances and restores TaskAssignResults from scratch by reading from
+   * CurrentState. It re-computes current quota profile for each AssignableInstance.
+   */
+  public void buildAssignableInstancesFromCurrentState (ClusterConfig clusterConfig,
+      Map<String, LiveInstance> liveInstances, Map<String, InstanceConfig> instanceConfigs, CurrentStateOutput currentStateOutput, Map<String, Resource> resourceMap) {
+    // Reset all cached information
+    //_assignableInstanceMap.clear();
+    //_taskAssignResultMap.clear();
+
+    // Create all AssignableInstance objects based on what's in liveInstances
+/*    for (Map.Entry<String, LiveInstance> liveInstanceEntry : liveInstances.entrySet()) {
+
+      // Prepare instance-specific metadata
+      String instanceName = liveInstanceEntry.getKey();
+      LiveInstance liveInstance = liveInstanceEntry.getValue();
+      if (!instanceConfigs.containsKey(instanceName)) {
+        continue; // Ill-formatted input; skip over this instance
+      }
+      InstanceConfig instanceConfig = instanceConfigs.get(instanceName);
+
+      // Create an AssignableInstance
+      AssignableInstance assignableInstance =
+          new AssignableInstance(clusterConfig, instanceConfig, liveInstance);
+      _assignableInstanceMap.put(instanceConfig.getInstanceName(), assignableInstance);
+      LOG.debug("AssignableInstance created for instance: {}", instanceName);
+    }*/
+
+    for (Map.Entry<String, AssignableInstance> assignableInstanceEntry: _assignableInstanceMap.entrySet()) {
+      for (Map.Entry<String, Resource> resourceEntry: resourceMap.entrySet()) {
+        String resourceName = resourceEntry.getKey();
+        System.out.println(resourceName + ":" + resourceEntry.getValue().getStateModelDefRef());
+      }
+
+    }
   }
 
   /**

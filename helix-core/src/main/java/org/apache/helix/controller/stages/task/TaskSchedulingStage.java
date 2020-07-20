@@ -57,6 +57,12 @@ public class TaskSchedulingStage extends AbstractBaseStage {
           "Missing attributes in event:" + event + ". Requires CURRENT_STATE|RESOURCES|DataCache");
     }
 
+
+    // Build quota capacity based on Current State
+    cache.getAssignableInstanceManager().buildAssignableInstancesFromCurrentState(
+        cache.getClusterConfig(), cache.getLiveInstances(), cache.getInstanceConfigMap(),
+        currentStateOutput, resourceMap);
+
     // Reset current INIT/RUNNING tasks on participants for throttling
     cache.resetActiveTaskCount(currentStateOutput);
 
