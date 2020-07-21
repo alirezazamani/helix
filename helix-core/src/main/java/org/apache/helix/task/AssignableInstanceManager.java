@@ -224,7 +224,8 @@ public class AssignableInstanceManager {
             currentStateOutput.getCurrentStateMap(resourceName);
         for (Map.Entry<Partition, Map<String, String>> currentStateMapEntry : currentStateMap
             .entrySet()) {
-          String taskId = getTaskID(jobConfig, jobContext, currentStateMapEntry.getKey());
+          Partition partition = currentStateMapEntry.getKey();
+          String taskId = getTaskID(jobConfig, jobContext, partition);
           for (Map.Entry<String, String> instanceCurrentStateEntry : currentStateMapEntry.getValue()
               .entrySet()) {
             String assignedInstance = instanceCurrentStateEntry.getKey();
@@ -239,12 +240,17 @@ public class AssignableInstanceManager {
             currentStateOutput.getPendingMessageMap(resourceName);
         for (Map.Entry<Partition, Map<String, Message>> pendingMessageMapEntry : pendingMessageMap
             .entrySet()) {
-          String taskId = getTaskID(jobConfig, jobContext, pendingMessageMapEntry.getKey());
+          Partition partition = pendingMessageMapEntry.getKey();
+          String taskId = getTaskID(jobConfig, jobContext, partition);
           for (Map.Entry<String, Message> instancePendingMessageEntry : pendingMessageMapEntry
               .getValue().entrySet()) {
             String assignedInstance = instancePendingMessageEntry.getKey();
             String messageToState = instancePendingMessageEntry.getValue().getToState();
-            if (messageToState.equals(TaskPartitionState.RUNNING.name())) {
+            if (messageToState.equals(TaskPartitionState.RUNNING.name())
+                && !TaskPartitionState.INIT.name().equals(
+                    currentStateOutput.getCurrentState(resourceName, partition, assignedInstance))
+                && !TaskPartitionState.RUNNING.name().equals(currentStateOutput
+                    .getCurrentState(resourceName, partition, assignedInstance))) {
               assignTaskToInstance(assignedInstance, jobConfig, taskId, quotaType);
             }
           }
