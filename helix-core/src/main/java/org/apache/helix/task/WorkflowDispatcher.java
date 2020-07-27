@@ -326,58 +326,9 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
    * Posts new job to cluster
    */
   private void scheduleSingleJob(String jobResource, JobConfig jobConfig) {
-    HelixAdmin admin = _manager.getClusterManagmentTool();
-
-    IdealState jobIS = admin.getResourceIdealState(_manager.getClusterName(), jobResource);
-    if (jobIS != null) {
-      LOG.info("Job " + jobResource + " idealstate already exists!");
-      return;
-    }
-
-    // Set up job resource based on partitions from target resource
-
-    // Create the UserContentStore for the job first
+    // Create the UserContentStore for the job
     TaskUtil.createUserContent(_manager.getHelixPropertyStore(), jobResource,
         new ZNRecord(TaskUtil.USER_CONTENT_NODE));
-
-    int numPartitions = jobConfig.getTaskConfigMap().size();
-    if (numPartitions == 0) {
-      IdealState targetIs =
-          admin.getResourceIdealState(_manager.getClusterName(), jobConfig.getTargetResource());
-      if (targetIs == null) {
-        LOG.warn("Target resource does not exist for job " + jobResource);
-        // do not need to fail here, the job will be marked as failure immediately when job starts
-        // running.
-      } else {
-        numPartitions = targetIs.getPartitionSet().size();
-      }
-    }
-
-    admin.addResource(_manager.getClusterName(), jobResource, numPartitions,
-        TaskConstants.STATE_MODEL_NAME);
-
-    // Push out new ideal state based on number of target partitions
-    IdealStateBuilder builder = new CustomModeISBuilder(jobResource);
-    builder.setRebalancerMode(IdealState.RebalanceMode.TASK);
-    builder.setNumReplica(1);
-    builder.setNumPartitions(numPartitions);
-    builder.setStateModel(TaskConstants.STATE_MODEL_NAME);
-
-    if (jobConfig.getInstanceGroupTag() != null) {
-      builder.setNodeGroup(jobConfig.getInstanceGroupTag());
-    }
-
-    if (jobConfig.isDisableExternalView()) {
-      builder.disableExternalView();
-    }
-
-    jobIS = builder.build();
-    for (int i = 0; i < numPartitions; i++) {
-      jobIS.getRecord().setListField(jobResource + "_" + i, new ArrayList<>());
-      jobIS.getRecord().setMapField(jobResource + "_" + i, new HashMap<>());
-    }
-    jobIS.setRebalancerClassName(JobRebalancer.class.getName());
-    admin.setResourceIdealState(_manager.getClusterName(), jobResource, jobIS);
   }
 
   /**

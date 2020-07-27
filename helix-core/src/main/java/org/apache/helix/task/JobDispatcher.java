@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.helix.util.RebalanceUtil;
 import org.apache.helix.zookeeper.datamodel.ZNRecord;
 import org.apache.helix.controller.dataproviders.WorkflowControllerDataProvider;
 import org.apache.helix.controller.stages.CurrentStateOutput;
@@ -92,7 +93,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
           "Workflow %s or job %s is already failed or completed, workflow state (%s), job state (%s), clean up job IS.",
           workflowResource, jobName, workflowState, jobState));
       finishJobInRuntimeJobDag(_dataProvider.getTaskDataCache(), workflowResource, jobName);
-      TaskUtil.cleanupJobIdealStateExtView(_manager.getHelixDataAccessor(), jobName);
+      RebalanceUtil.scheduleOnDemandPipeline(_manager.getClusterName(),0L,false);
       _rebalanceScheduler.removeScheduledRebalance(jobName);
       return buildEmptyAssignment(jobName, currStateOutput);
     }
@@ -219,6 +220,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       LOG.info(failureMsg);
       jobCtx.setInfo(failureMsg);
       failJob(jobResource, workflowCtx, jobCtx, workflowConfig, cache.getJobConfigMap(), cache);
+      RebalanceUtil.scheduleOnDemandPipeline(cache.getClusterName(),0L,false);
       markAllPartitionsError(jobCtx);
       return new ResourceAssignment(jobResource);
     }
@@ -253,6 +255,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
             && !cache.getIdealState(jobCfg.getTargetResource()).isEnabled())) {
       if (isJobFinished(jobCtx, jobResource, currStateOutput)) {
         failJob(jobResource, workflowCtx, jobCtx, workflowConfig, cache.getJobConfigMap(), cache);
+        RebalanceUtil.scheduleOnDemandPipeline(cache.getClusterName(),0L,false);
         return buildEmptyAssignment(jobResource, currStateOutput);
       }
       workflowCtx.setJobState(jobResource, TaskState.FAILING);
@@ -277,6 +280,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
 
     if (jobState == TaskState.FAILING && isJobFinished(jobCtx, jobResource, currStateOutput)) {
       failJob(jobResource, workflowCtx, jobCtx, workflowConfig, cache.getJobConfigMap(), cache);
+      RebalanceUtil.scheduleOnDemandPipeline(cache.getClusterName(),0L,false);
       return buildEmptyAssignment(jobResource, currStateOutput);
     }
 
@@ -286,7 +290,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       _clusterStatusMonitor.updateJobCounters(jobCfg, TaskState.COMPLETED,
           jobCtx.getFinishTime() - jobCtx.getStartTime());
       _rebalanceScheduler.removeScheduledRebalance(jobResource);
-      TaskUtil.cleanupJobIdealStateExtView(_manager.getHelixDataAccessor(), jobResource);
+      RebalanceUtil.scheduleOnDemandPipeline(cache.getClusterName(),0L,false);
       return buildEmptyAssignment(jobResource, currStateOutput);
     }
 
@@ -297,6 +301,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       handleJobTimeout(jobCtx, workflowCtx, jobResource, jobCfg);
       finishJobInRuntimeJobDag(cache.getTaskDataCache(), workflowConfig.getWorkflowId(),
           jobResource);
+      RebalanceUtil.scheduleOnDemandPipeline(cache.getClusterName(),0L,false);
       return buildEmptyAssignment(jobResource, currStateOutput);
     }
 
