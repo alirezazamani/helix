@@ -33,7 +33,10 @@ import org.apache.helix.model.CurrentState;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.model.LiveInstance;
 import org.apache.helix.model.Resource;
+import org.apache.helix.model.ResourceConfig;
+import org.apache.helix.task.JobConfig;
 import org.apache.helix.task.TaskConstants;
+import org.apache.helix.task.WorkflowConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,11 +159,40 @@ public class ResourceComputationStage extends AbstractBaseStage {
 
           for (String partition : resourceStateMap.keySet()) {
             addPartition(partition, resourceName, resourceMap);
+
           }
         }
       }
     }
 
+    // Add TaskFramework resources from workflow configs as Task Framework will no longer use IdealState
+    if (isTaskCache) {
+      WorkflowControllerDataProvider taskDataCache = event.getAttribute(AttributeName.ControllerDataProvider.name());
+      for (Map.Entry<String, JobConfig> jobConfigEntry: taskDataCache.getJobConfigMap().entrySet()) {
+        String resourceName = jobConfigEntry.getKey();
+        if (!resourceMap.containsKey(resourceName)) {
+          JobConfig jobConfig = jobConfigEntry.getValue();
+          addResource(resourceName, resourceMap);
+          Resource resource = resourceMap.get(resourceName);
+          resource.setStateModelDefRef(TaskConstants.STATE_MODEL_NAME);
+          resource.setStateModelFactoryName(jobConfig.getStateModelFactoryName());
+          boolean batchMessageMode = jobConfig.getBatchMessageMode();
+          ClusterConfig clusterConfig = cache.getClusterConfig();
+          if (clusterConfig != null) {
+            batchMessageMode |= clusterConfig.getBatchMessageMode();
+          }
+          resource.setBatchMessageMode(batchMessageMode);
+          resource.setResourceGroupName(jobConfig.getResourceGroupName());
+          resource.setResourceTag(jobConfig.getInstanceGroupTag());
+          resourceToRebalance.put(resourceName, resource);
+          int numPartitions = jobConfig.getNumPartitions();
+          for (int i = 0; i < numPartitions; i++) {
+            String partition = resourceName + "_" + i;
+            addPartition(partition, resourceName, resourceMap);
+          }
+        }
+      }
+    }
     event.addAttribute(AttributeName.RESOURCES.name(), resourceMap);
     event.addAttribute(AttributeName.RESOURCES_TO_REBALANCE.name(), resourceToRebalance);
   }
