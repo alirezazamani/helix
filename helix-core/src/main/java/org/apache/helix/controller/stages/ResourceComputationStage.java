@@ -101,6 +101,61 @@ public class ResourceComputationStage extends AbstractBaseStage {
       }
     }
 
+    // Add TaskFramework resources from workflow and job configs as Task Framework will no longer
+    // use IdealState
+    if (isTaskCache) {
+      WorkflowControllerDataProvider taskDataCache =
+          event.getAttribute(AttributeName.ControllerDataProvider.name());
+      for (Map.Entry<String, WorkflowConfig> workflowConfigEntry : taskDataCache.getWorkflowConfigMap()
+          .entrySet()) {
+        String resourceName = workflowConfigEntry.getKey();
+        if (!resourceMap.containsKey(resourceName)) {
+          WorkflowConfig workflowConfig = workflowConfigEntry.getValue();
+          addResource(resourceName, resourceMap);
+          Resource resource = resourceMap.get(resourceName);
+          resource.setStateModelDefRef(TaskConstants.STATE_MODEL_NAME);
+          resource.setStateModelFactoryName(workflowConfig.getStateModelFactoryName());
+          boolean batchMessageMode = workflowConfig.getBatchMessageMode();
+          ClusterConfig clusterConfig = cache.getClusterConfig();
+          if (clusterConfig != null) {
+            batchMessageMode |= clusterConfig.getBatchMessageMode();
+          }
+          resource.setBatchMessageMode(batchMessageMode);
+          resource.setResourceGroupName(workflowConfig.getResourceGroupName());
+          resource.setResourceTag(workflowConfig.getInstanceGroupTag());
+          resourceToRebalance.put(resourceName, resource);
+          String partition = resourceName;
+          addPartition(partition, resourceName, resourceMap);
+        }
+      }
+
+      for (Map.Entry<String, JobConfig> jobConfigEntry : taskDataCache.getJobConfigMap()
+          .entrySet()) {
+        String resourceName = jobConfigEntry.getKey();
+        if (!resourceMap.containsKey(resourceName)) {
+          JobConfig jobConfig = jobConfigEntry.getValue();
+          addResource(resourceName, resourceMap);
+          Resource resource = resourceMap.get(resourceName);
+          resource.setStateModelDefRef(TaskConstants.STATE_MODEL_NAME);
+          resource.setStateModelFactoryName(jobConfig.getStateModelFactoryName());
+          boolean batchMessageMode = jobConfig.getBatchMessageMode();
+          ClusterConfig clusterConfig = cache.getClusterConfig();
+          if (clusterConfig != null) {
+            batchMessageMode |= clusterConfig.getBatchMessageMode();
+          }
+          resource.setBatchMessageMode(batchMessageMode);
+          resource.setResourceGroupName(jobConfig.getResourceGroupName());
+          resource.setResourceTag(jobConfig.getInstanceGroupTag());
+          resourceToRebalance.put(resourceName, resource);
+          int numPartitions = jobConfig.getNumPartitions();
+          for (int i = 0; i < numPartitions; i++) {
+            String partition = resourceName + "_" + i;
+            addPartition(partition, resourceName, resourceMap);
+          }
+        }
+      }
+    }
+
     // It's important to get partitions from CurrentState as well since the
     // idealState might be removed.
     Map<String, LiveInstance> availableInstances = cache.getLiveInstances();
@@ -160,35 +215,6 @@ public class ResourceComputationStage extends AbstractBaseStage {
           for (String partition : resourceStateMap.keySet()) {
             addPartition(partition, resourceName, resourceMap);
 
-          }
-        }
-      }
-    }
-
-    // Add TaskFramework resources from workflow configs as Task Framework will no longer use IdealState
-    if (isTaskCache) {
-      WorkflowControllerDataProvider taskDataCache = event.getAttribute(AttributeName.ControllerDataProvider.name());
-      for (Map.Entry<String, JobConfig> jobConfigEntry: taskDataCache.getJobConfigMap().entrySet()) {
-        String resourceName = jobConfigEntry.getKey();
-        if (!resourceMap.containsKey(resourceName)) {
-          JobConfig jobConfig = jobConfigEntry.getValue();
-          addResource(resourceName, resourceMap);
-          Resource resource = resourceMap.get(resourceName);
-          resource.setStateModelDefRef(TaskConstants.STATE_MODEL_NAME);
-          resource.setStateModelFactoryName(jobConfig.getStateModelFactoryName());
-          boolean batchMessageMode = jobConfig.getBatchMessageMode();
-          ClusterConfig clusterConfig = cache.getClusterConfig();
-          if (clusterConfig != null) {
-            batchMessageMode |= clusterConfig.getBatchMessageMode();
-          }
-          resource.setBatchMessageMode(batchMessageMode);
-          resource.setResourceGroupName(jobConfig.getResourceGroupName());
-          resource.setResourceTag(jobConfig.getInstanceGroupTag());
-          resourceToRebalance.put(resourceName, resource);
-          int numPartitions = jobConfig.getNumPartitions();
-          for (int i = 0; i < numPartitions; i++) {
-            String partition = resourceName + "_" + i;
-            addPartition(partition, resourceName, resourceMap);
           }
         }
       }
