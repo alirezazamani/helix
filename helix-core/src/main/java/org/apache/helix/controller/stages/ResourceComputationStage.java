@@ -106,7 +106,7 @@ public class ResourceComputationStage extends AbstractBaseStage {
     if (isTaskCache) {
       WorkflowControllerDataProvider taskDataCache =
           event.getAttribute(AttributeName.ControllerDataProvider.name());
-      for (Map.Entry<String, WorkflowConfig> workflowConfigEntry : taskDataCache.getWorkflowConfigMap()
+/*      for (Map.Entry<String, WorkflowConfig> workflowConfigEntry : taskDataCache.getWorkflowConfigMap()
           .entrySet()) {
         String resourceName = workflowConfigEntry.getKey();
         if (!resourceMap.containsKey(resourceName)) {
@@ -127,7 +127,7 @@ public class ResourceComputationStage extends AbstractBaseStage {
           String partition = resourceName;
           addPartition(partition, resourceName, resourceMap);
         }
-      }
+      }*/
 
       for (Map.Entry<String, JobConfig> jobConfigEntry : taskDataCache.getJobConfigMap()
           .entrySet()) {
@@ -147,7 +147,15 @@ public class ResourceComputationStage extends AbstractBaseStage {
           resource.setResourceGroupName(jobConfig.getResourceGroupName());
           resource.setResourceTag(jobConfig.getInstanceGroupTag());
           resourceToRebalance.put(resourceName, resource);
-          int numPartitions = jobConfig.getNumPartitions();
+          int numPartitions = jobConfig.getTaskConfigMap().size();
+          if (numPartitions == 0 && idealStates != null) {
+            IdealState targetIs = idealStates.get(jobConfig.getTargetResource());
+            if (targetIs == null) {
+              LOG.warn("Target resource does not exist for job " + resourceName);
+            } else {
+              numPartitions = targetIs.getPartitionSet().size();
+            }
+          }
           for (int i = 0; i < numPartitions; i++) {
             String partition = resourceName + "_" + i;
             addPartition(partition, resourceName, resourceMap);
