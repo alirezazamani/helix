@@ -135,6 +135,10 @@ public class TaskSchedulingStage extends AbstractBaseStage {
 
     String resourceName = resource.getResourceName();
     LogUtil.logDebug(logger, _eventId, "Processing resource:" + resourceName);
+    if (currentStateOutput.getCurrentStateMap(resourceName).isEmpty()) {
+      return false;
+    }
+
     // Ideal state may be gone. In that case we need to get the state model name
     // from the current state
     IdealState idealState = cache.getIdealState(resourceName);
