@@ -326,13 +326,13 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
    * Posts new job to cluster
    */
   private void scheduleSingleJob(String jobResource, JobConfig jobConfig) {
-    HelixAdmin admin = _manager.getClusterManagmentTool();
+    //HelixAdmin admin = _manager.getClusterManagmentTool();
 
-    IdealState jobIS = admin.getResourceIdealState(_manager.getClusterName(), jobResource);
-    if (jobIS != null) {
-      LOG.info("Job " + jobResource + " idealstate already exists!");
-      return;
-    }
+    //IdealState jobIS = admin.getResourceIdealState(_manager.getClusterName(), jobResource);
+    //if (jobIS != null) {
+    //  LOG.info("Job " + jobResource + " idealstate already exists!");
+    //  return;
+    //}
 
     // Set up job resource based on partitions from target resource
 
@@ -340,7 +340,7 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
     TaskUtil.createUserContent(_manager.getHelixPropertyStore(), jobResource,
         new ZNRecord(TaskUtil.USER_CONTENT_NODE));
 
-    int numPartitions = jobConfig.getTaskConfigMap().size();
+   /* int numPartitions = jobConfig.getTaskConfigMap().size();
     if (numPartitions == 0) {
       IdealState targetIs =
           admin.getResourceIdealState(_manager.getClusterName(), jobConfig.getTargetResource());
@@ -377,7 +377,7 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
       jobIS.getRecord().setMapField(jobResource + "_" + i, new HashMap<>());
     }
     jobIS.setRebalancerClassName(JobRebalancer.class.getName());
-    admin.setResourceIdealState(_manager.getClusterName(), jobResource, jobIS);
+    admin.setResourceIdealState(_manager.getClusterName(), jobResource, jobIS);*/
   }
 
   /**
