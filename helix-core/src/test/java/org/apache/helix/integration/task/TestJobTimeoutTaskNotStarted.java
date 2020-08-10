@@ -148,12 +148,17 @@ public class TestJobTimeoutTaskNotStarted extends TaskSynchronizedTestBase {
     timeoutWorkflowBuilder.addJob(TIMEOUT_JOB_2, timeoutJobBuilder) // job 2 also timeout
         .addParentChildDependency(TIMEOUT_JOB_1, TIMEOUT_JOB_2);
 
+    System.out.println("starting");
     _driver.start(timeoutWorkflowBuilder.build());
+    System.out.println("started");
     _driver.pollForJobState(TIMEOUT_WORKFLOW_NAME,
         TaskUtil.getNamespacedJobName(TIMEOUT_WORKFLOW_NAME, TIMEOUT_JOB_1), TaskState.TIMED_OUT);
+    System.out.println("job1 time outed");
     _driver.pollForJobState(TIMEOUT_WORKFLOW_NAME,
         TaskUtil.getNamespacedJobName(TIMEOUT_WORKFLOW_NAME, TIMEOUT_JOB_2), TaskState.TIMED_OUT);
+    System.out.println("job2 time outed");
     _driver.pollForWorkflowState(TIMEOUT_WORKFLOW_NAME, TaskState.FAILED);
+    System.out.println("workflow failed");
 
     JobContext jobContext =
         _driver.getJobContext(TaskUtil.getNamespacedJobName(TIMEOUT_WORKFLOW_NAME, TIMEOUT_JOB_1));
