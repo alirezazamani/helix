@@ -297,6 +297,10 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       handleJobTimeout(jobCtx, workflowCtx, jobResource, jobCfg);
       finishJobInRuntimeJobDag(cache.getTaskDataCache(), workflowConfig.getWorkflowId(),
           jobResource);
+      if (isWorkflowFinished(workflowCtx, workflowConfig, cache.getJobConfigMap(), cache)) {
+        workflowCtx.setFinishTime(currentTime);
+        updateWorkflowMonitor(workflowCtx, workflowConfig);
+      }
       return buildEmptyAssignment(jobResource, currStateOutput);
     }
 
