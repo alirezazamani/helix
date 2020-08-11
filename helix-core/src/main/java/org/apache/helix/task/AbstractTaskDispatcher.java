@@ -959,9 +959,18 @@ public abstract class AbstractTaskDispatcher {
       Map<String, JobConfig> jobConfigMap, WorkflowControllerDataProvider clusterDataCache) {
     boolean incomplete = false;
 
+    // If workflow state is TIMED_OUT but any of the jobs not in terminal states, do not consider
+    // this workflow as finished.
+    Set<TaskState> terminalJobStates = new HashSet<>(Arrays.asList(TaskState.TIMED_OUT,
+        TaskState.COMPLETED, TaskState.FAILED, TaskState.ABORTED));
     TaskState workflowState = ctx.getWorkflowState();
     if (TaskState.TIMED_OUT.equals(workflowState)) {
-      // We don't update job state here as JobRebalancer will do it
+      for (String jobName : cfg.getJobDag().getAllNodes()) {
+        if (ctx.getJobState(jobName) != null
+            && !terminalJobStates.contains(ctx.getJobState(jobName))) {
+          return false;
+        }
+      }
       return true;
     }
 

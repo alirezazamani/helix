@@ -136,11 +136,7 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
         long cleanupTime = workflowCtx.getFinishTime() + expiryTime;
         _rebalanceScheduler.scheduleRebalance(_manager, workflow, cleanupTime);
       }
-      // If workflow state is TIMED_OUT, the controller still needs to process the jobs and update
-      // the workflow's job status
-      if (!TaskState.TIMED_OUT.equals(workflowCtx.getWorkflowState())) {
-        return;
-      }
+      return;
     }
 
     if (!workflowCfg.isTerminable() || workflowCfg.isJobQueue()) {
