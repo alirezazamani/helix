@@ -30,6 +30,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.helix.util.RebalanceUtil;
 import org.apache.helix.zookeeper.datamodel.ZNRecord;
 import org.apache.helix.controller.dataproviders.WorkflowControllerDataProvider;
 import org.apache.helix.controller.stages.CurrentStateOutput;
@@ -297,10 +298,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       handleJobTimeout(jobCtx, workflowCtx, jobResource, jobCfg);
       finishJobInRuntimeJobDag(cache.getTaskDataCache(), workflowConfig.getWorkflowId(),
           jobResource);
-      if (isWorkflowFinished(workflowCtx, workflowConfig, cache.getJobConfigMap(), cache)) {
-        workflowCtx.setFinishTime(currentTime);
-        updateWorkflowMonitor(workflowCtx, workflowConfig);
-      }
+      RebalanceUtil.scheduleOnDemandPipeline(cache.getClusterName(),0L,false);
       return buildEmptyAssignment(jobResource, currStateOutput);
     }
 
