@@ -518,7 +518,6 @@ public abstract class AbstractTaskDispatcher {
     }
     _clusterStatusMonitor.updateJobCounters(jobCfg, TaskState.TIMED_OUT);
     _rebalanceScheduler.removeScheduledRebalance(jobResource);
-    TaskUtil.cleanupJobIdealStateExtView(_manager.getHelixDataAccessor(), jobResource);
   }
 
   protected void failJob(String jobName, WorkflowContext workflowContext, JobContext jobContext,
@@ -534,7 +533,6 @@ public abstract class AbstractTaskDispatcher {
     }
     _clusterStatusMonitor.updateJobCounters(jobConfigMap.get(jobName), TaskState.FAILED);
     _rebalanceScheduler.removeScheduledRebalance(jobName);
-    TaskUtil.cleanupJobIdealStateExtView(_manager.getHelixDataAccessor(), jobName);
   }
 
   // Compute real assignment from theoretical calculation with applied throttling
