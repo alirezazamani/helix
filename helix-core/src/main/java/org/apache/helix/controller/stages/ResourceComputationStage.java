@@ -65,7 +65,7 @@ public class ResourceComputationStage extends AbstractBaseStage {
 
     boolean isTaskCache = cache instanceof WorkflowControllerDataProvider;
 
-    if (idealStates != null && idealStates.size() > 0) {
+    if (idealStates != null && idealStates.size() > 0 && !isTaskCache) {
       for (IdealState idealState : idealStates.values()) {
         if (idealState == null) {
           continue;
@@ -77,9 +77,8 @@ public class ResourceComputationStage extends AbstractBaseStage {
               cache.getResourceConfig(resourceName));
           resourceMap.put(resourceName, resource);
 
-          if (!idealState.isValid() && !isTaskCache
-              || idealState.getStateModelDefRef().equals(TaskConstants.STATE_MODEL_NAME) && isTaskCache
-              || !idealState.getStateModelDefRef().equals(TaskConstants.STATE_MODEL_NAME) && !isTaskCache) {
+          if (!idealState.isValid()
+              || !idealState.getStateModelDefRef().equals(TaskConstants.STATE_MODEL_NAME)) {
             resourceToRebalance.put(resourceName, resource);
           }
           resource.setStateModelDefRef(idealState.getStateModelDefRef());
@@ -106,7 +105,7 @@ public class ResourceComputationStage extends AbstractBaseStage {
     if (isTaskCache) {
       WorkflowControllerDataProvider taskDataCache =
           event.getAttribute(AttributeName.ControllerDataProvider.name());
-/*      for (Map.Entry<String, WorkflowConfig> workflowConfigEntry : taskDataCache.getWorkflowConfigMap()
+      for (Map.Entry<String, WorkflowConfig> workflowConfigEntry : taskDataCache.getWorkflowConfigMap()
           .entrySet()) {
         String resourceName = workflowConfigEntry.getKey();
         if (!resourceMap.containsKey(resourceName)) {
@@ -127,7 +126,7 @@ public class ResourceComputationStage extends AbstractBaseStage {
           String partition = resourceName;
           addPartition(partition, resourceName, resourceMap);
         }
-      }*/
+      }
 
       for (Map.Entry<String, JobConfig> jobConfigEntry : taskDataCache.getJobConfigMap()
           .entrySet()) {
