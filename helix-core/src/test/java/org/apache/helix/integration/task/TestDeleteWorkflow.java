@@ -88,7 +88,7 @@ public class TestDeleteWorkflow extends TaskTestBase {
   }
 
   @Test
-  public void testDeleteWorkflowForcefully() throws InterruptedException {
+  public void testDeleteWorkflowWithoutIdealState() throws InterruptedException {
     String jobQueueName = TestHelper.getTestMethodName();
     JobConfig.Builder jobBuilder = JobConfig.Builder.fromMap(WorkflowGenerator.DEFAULT_JOB_CONFIG)
         .setMaxAttemptsPerTask(1).setWorkflow(jobQueueName)
@@ -115,17 +115,8 @@ public class TestDeleteWorkflow extends TaskTestBase {
     accessor.removeProperty(keyBuild.idealStates(jobQueueName));
     Assert.assertNull(admin.getResourceIdealState(CLUSTER_NAME, jobQueueName));
 
-    // Attempt the deletion and and it should time out since idealstate does not exist anymore.
-    try {
-      _driver.deleteAndWaitForCompletion(jobQueueName, DELETE_DELAY);
-      Assert.fail(
-          "Delete must time out and throw a HelixException with the Controller paused, but did not!");
-    } catch (HelixException e) {
-      // Pass
-    }
-
-    // delete forcefully
-    _driver.delete(jobQueueName, true);
+    // The deletion should work because task pipeline is independent of IdealState
+    _driver.deleteAndWaitForCompletion(jobQueueName, DELETE_DELAY);
 
     Assert.assertNull(_driver.getWorkflowConfig(jobQueueName));
     Assert.assertNull(_driver.getWorkflowContext(jobQueueName));
