@@ -167,8 +167,8 @@ public class TaskDriver {
           flow.getName(), failedJobRemoval));
     }
 
-    // Finally add workflow resource.
-    addWorkflowResource(flow.getName());
+    // Create UserContent znode for the workflow
+    TaskUtil.createUserContent(_propertyStore, flow.getName(), new ZNRecord(TaskUtil.USER_CONTENT_NODE));
   }
 
   /**
@@ -524,10 +524,6 @@ public class TaskDriver {
       }
       throw new HelixException("Failed to enqueue job");
     }
-
-    // This is to make it back-compatible with old Helix task driver.
-    addWorkflowResourceIfNecessary(queue);
-
   }
 
   /**
