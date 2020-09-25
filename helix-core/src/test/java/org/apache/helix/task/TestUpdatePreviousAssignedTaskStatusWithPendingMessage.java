@@ -69,12 +69,14 @@ public class TestUpdatePreviousAssignedTaskStatusWithPendingMessage {
     JobContext jobContext = prepareJobContext(TaskPartitionState.INIT);
     JobConfig jobConfig = prepareJobConfig();
     Map<String, Set<Integer>> tasksToDrop = new HashMap<>();
+    Map<String, Set<Integer>> tasksWithPendingMessage = new HashMap<>();
     tasksToDrop.put(INSTANCE_NAME, new HashSet<>());
+    tasksWithPendingMessage.put(INSTANCE_NAME, new HashSet<>());
     WorkflowControllerDataProvider cache = new WorkflowControllerDataProvider();
     jobDispatcher.updatePreviousAssignedTasksStatus(currentInstanceToTaskAssignments,
         new HashSet<>(), JOB_NAME, currentStateOutput, jobContext, jobConfig, TaskState.TIMING_OUT,
         new HashMap<>(), new HashSet<>(), paMap, TargetState.STOP, new HashSet<>(), cache,
-        tasksToDrop);
+        tasksToDrop, tasksWithPendingMessage);
     Assert.assertEquals(paMap.get(0)._state, TaskPartitionState.INIT.name());
   }
 
@@ -98,12 +100,13 @@ public class TestUpdatePreviousAssignedTaskStatusWithPendingMessage {
     JobContext jobContext = prepareJobContext(TaskPartitionState.RUNNING);
     JobConfig jobConfig = prepareJobConfig();
     Map<String, Set<Integer>> tasksToDrop = new HashMap<>();
+    Map<String, Set<Integer>> tasksWithPendingMessage = new HashMap<>();
     tasksToDrop.put(INSTANCE_NAME, new HashSet<>());
     WorkflowControllerDataProvider cache = new WorkflowControllerDataProvider();
     jobDispatcher.updatePreviousAssignedTasksStatus(currentInstanceToTaskAssignments,
         new HashSet<>(), JOB_NAME, currentStateOutput, jobContext, jobConfig, TaskState.IN_PROGRESS,
         new HashMap<>(), new HashSet<>(), paMap, TargetState.START, new HashSet<>(), cache,
-        tasksToDrop);
+        tasksToDrop, tasksWithPendingMessage);
     Assert.assertEquals(paMap.get(0)._state, TaskPartitionState.DROPPED.name());
   }
 

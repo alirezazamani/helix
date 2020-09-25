@@ -74,7 +74,7 @@ public abstract class AbstractTaskDispatcher {
       Map<String, Set<Integer>> assignedPartitions, Set<Integer> partitionsToDropFromIs,
       Map<Integer, PartitionAssignment> paMap, TargetState jobTgtState,
       Set<Integer> skippedPartitions, WorkflowControllerDataProvider cache,
-      Map<String, Set<Integer>> tasksToDrop) {
+      Map<String, Set<Integer>> tasksToDrop,  Map<String, Set<Integer>> tasksWithPendingMessage) {
 
     // If a job is in one of the following states and its tasks are in RUNNING states, the tasks
     // will be aborted.
@@ -122,27 +122,37 @@ public abstract class AbstractTaskDispatcher {
       Set<Integer> donePartitions = new TreeSet<>();
       for (int pId : pSet) {
         final String pName = pName(jobResource, pId);
-        TaskPartitionState currState = updateJobContextAndGetTaskCurrentState(currStateOutput,
+        TaskPartitionState currState = getTaskCurrentState(currStateOutput,
             jobResource, pId, pName, instance, jobCtx, jobTgtState);
-
-        if (!instance.equals(jobCtx.getAssignedParticipant(pId))) {
-          LOG.warn(
-              "Instance {} does not match the assigned participant for pId {} in the job context. Skipping task scheduling.",
-              instance, pId);
-          continue;
-        }
 
         // Check for pending state transitions on this (partition, instance). If there is a pending
         // state transition, we prioritize this pending state transition and set the assignment from
         // this pending state transition, essentially "waiting" until this pending message clears
         Message pendingMessage =
             currStateOutput.getPendingMessage(jobResource, new Partition(pName), instance);
-        if (pendingMessage != null && !pendingMessage.getToState().equals(currState.name())) {
-          // If there is a pending message whose destination state is different from the current
-          // state, just make the same assignment as the pending message. This is essentially
-          // "waiting" until this state transition is complete
-          processTaskWithPendingMessage(pId, pName, instance, pendingMessage, jobState, currState,
-              paMap, assignedPartitions);
+        if (pendingMessage != null) {
+          if (!pendingMessage.getToState().equals(currState.name())) {
+            // If there is a pending message whose destination state is different from the current
+            // state, just make the same assignment as the pending message. This is essentially
+            // "waiting" until this state transition is complete
+            processTaskWithPendingMessage(pId, pName, instance, pendingMessage, jobState, currState, paMap,
+                assignedPartitions);
+          }
+          if (!tasksWithPendingMessage.containsKey(instance)) {
+            tasksWithPendingMessage.put(instance, new HashSet<>());
+          }
+          tasksWithPendingMessage.get(instance).add(pId);
+          continue;
+        }
+
+        // Update job context based on current state
+        updatePartitionInformationInJobContext(currStateOutput, jobResource, currState, jobCtx,
+            pId, pName, instance);
+
+        if (!instance.equals(jobCtx.getAssignedParticipant(pId))) {
+          LOG.warn(
+              "Instance {} does not match the assigned participant for pId {} in the job context. Skipping task scheduling.",
+              instance, pId);
           continue;
         }
 
@@ -365,7 +375,7 @@ public abstract class AbstractTaskDispatcher {
     }
   }
 
-  private TaskPartitionState updateJobContextAndGetTaskCurrentState(
+  private TaskPartitionState getTaskCurrentState(
       CurrentStateOutput currentStateOutput, String jobResource, Integer pId, String pName,
       String instance, JobContext jobCtx, TargetState jobTgtState) {
     String currentStateString =
@@ -389,9 +399,6 @@ public abstract class AbstractTaskDispatcher {
       return stateFromContext == null ? TaskPartitionState.INIT : stateFromContext;
     }
     TaskPartitionState currentState = TaskPartitionState.valueOf(currentStateString);
-    // Update job context based on current state
-    updatePartitionInformationInJobContext(currentStateOutput, jobResource, currentState, jobCtx,
-        pId, pName, instance);
     return currentState;
   }
 
@@ -556,7 +563,8 @@ public abstract class AbstractTaskDispatcher {
       WorkflowContext workflowCtx, final WorkflowControllerDataProvider cache,
       Map<String, Set<Integer>> assignedPartitions, Map<Integer, PartitionAssignment> paMap,
       Set<Integer> skippedPartitions, TaskAssignmentCalculator taskAssignmentCal,
-      Set<Integer> allPartitions, final long currentTime, Collection<String> liveInstances) {
+      Set<Integer> allPartitions, final long currentTime, Collection<String> liveInstances,
+      Map<String, Set<Integer>> tasksWithPendingMessage) {
 
     // See if there was LiveInstance change and cache LiveInstances from this iteration of pipeline
     boolean existsLiveInstanceOrCurrentStateOrMessageChangeChange =
@@ -570,6 +578,11 @@ public abstract class AbstractTaskDispatcher {
     for (Set<Integer> assignedSet : assignedPartitions.values()) {
       excludeSet.addAll(assignedSet);
     }
+
+    for (Set<Integer> pendingMessageSet : tasksWithPendingMessage.values()) {
+      excludeSet.addAll(pendingMessageSet);
+    }
+
     addCompletedTasks(excludeSet, jobCtx, allPartitions);
     addPartitionsReachedMaximumRetries(excludeSet, jobCtx, allPartitions, jobCfg);
     excludeSet.addAll(skippedPartitions);

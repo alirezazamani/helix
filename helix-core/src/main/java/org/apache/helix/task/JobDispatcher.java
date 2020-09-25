@@ -233,6 +233,8 @@ public class JobDispatcher extends AbstractTaskDispatcher {
     // These dropping transitions will be prioritized above all task state transition assignments
     Map<String, Set<Integer>> tasksToDrop = new HashMap<>();
 
+    Map<String, Set<Integer>> tasksWithPendingMessage = new HashMap<>();
+
     Map<String, SortedSet<Integer>> currentInstanceToTaskAssignments =
         getCurrentInstanceToTaskAssignments(liveInstances, currStateOutput, jobResource, tasksToDrop);
 
@@ -248,7 +250,8 @@ public class JobDispatcher extends AbstractTaskDispatcher {
     // Release resource for tasks in terminal state
     updatePreviousAssignedTasksStatus(currentInstanceToTaskAssignments, excludedInstances,
         jobResource, currStateOutput, jobCtx, jobCfg, jobState, assignedPartitions,
-        partitionsToDropFromIs, paMap, jobTgtState, skippedPartitions, cache, tasksToDrop);
+        partitionsToDropFromIs, paMap, jobTgtState, skippedPartitions, cache, tasksToDrop,
+        tasksWithPendingMessage);
 
     addGivenUpPartitions(skippedPartitions, jobCtx, allPartitions, jobCfg);
 
@@ -318,7 +321,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       handleAdditionalTaskAssignment(currentInstanceToTaskAssignments, excludedInstances,
           jobResource, currStateOutput, jobCtx, jobCfg, workflowConfig, workflowCtx, cache,
           assignedPartitions, paMap, skippedPartitions, taskAssignmentCal, allPartitions,
-          currentTime, liveInstances);
+          currentTime, liveInstances, tasksWithPendingMessage);
     }
 
     return toResourceAssignment(jobResource, paMap);
