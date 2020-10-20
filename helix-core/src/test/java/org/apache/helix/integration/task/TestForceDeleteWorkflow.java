@@ -105,7 +105,7 @@ public class TestForceDeleteWorkflow extends TaskTestBase {
     // Create a simple workflow and wait for its completion. Then delete the WorkflowContext and
     // WorkflowConfig using ForceDelete.
     String workflowName = TestHelper.getTestMethodName();
-    Workflow.Builder builder = createCustomWorkflow(workflowName, LONG_EXECUTION_TIME, "0");
+    Workflow.Builder builder = createCustomWorkflow(workflowName, SHORT_EXECUTION_TIME, "0");
     _driver.start(builder.build());
 
     // Wait until workflow is created and completed.
