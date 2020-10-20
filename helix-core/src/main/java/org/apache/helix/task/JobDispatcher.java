@@ -38,6 +38,9 @@ import org.apache.helix.model.Message;
 import org.apache.helix.model.Partition;
 import org.apache.helix.model.ResourceAssignment;
 import org.apache.helix.task.assigner.ThreadCountBasedTaskAssigner;
+import org.apache.helix.zookeeper.datamodel.serializer.ZNRecordJacksonSerializer;
+import org.apache.helix.zookeeper.datamodel.serializer.ZNRecordSerializer;
+import org.apache.helix.zookeeper.zkclient.serialize.ZkSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -115,8 +118,11 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       return buildEmptyAssignment(jobName, currStateOutput);
     }
 
+    ZkSerializer serializer = new ZNRecordJacksonSerializer();
+
     // Fetch any existing context information from the property store.
     JobContext jobCtx = _dataProvider.getJobContext(jobName);
+    String serializeJobContext = null;
     if (jobCtx == null) {
       jobCtx = new JobContext(new ZNRecord(TaskUtil.TASK_CONTEXT_KW));
       final long currentTimestamp = System.currentTimeMillis();
@@ -132,6 +138,8 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       // here asynchronously
       reportSubmissionToProcessDelay(_dataProvider, _clusterStatusMonitor, workflowCfg, jobCfg,
           currentTimestamp);
+    } else {
+      serializeJobContext = new String(new ZNRecordSerializer().serialize(jobCtx.getRecord()));
     }
 
     if (!TaskState.TIMED_OUT.equals(workflowCtx.getJobState(jobName))) {
@@ -185,7 +193,9 @@ public class JobDispatcher extends AbstractTaskDispatcher {
             currStateOutput, workflowCtx, jobCtx, partitionsToDrop, _dataProvider);
 
     // Update Workflow and Job context in data cache and ZK.
-    _dataProvider.updateJobContext(jobName, jobCtx);
+    if (serializeJobContext == null || !serializer.deserialize(serializeJobContext.getBytes()).equals(jobCtx.getRecord())) {
+      _dataProvider.updateJobContext(jobName, jobCtx);
+    }
     _dataProvider.updateWorkflowContext(workflowResource, workflowCtx);
 
     LOG.debug("Job " + jobName + " new assignment "
