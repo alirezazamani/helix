@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.helix.AccessOption;
@@ -41,6 +42,7 @@ import org.apache.helix.task.RuntimeJobDag;
 import org.apache.helix.task.TaskConstants;
 import org.apache.helix.task.WorkflowConfig;
 import org.apache.helix.task.WorkflowContext;
+import org.apache.helix.util.HelixUtil;
 import org.apache.helix.zookeeper.datamodel.ZNRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,6 +61,7 @@ public class TaskDataCache extends AbstractDataCache {
   // TODO: context and previous assignment should be wrapped into a class. Otherwise, int the future,
   // concurrency will be hard to handle.
   private Map<String, ZNRecord> _contextMap = new HashMap<>();
+  private Map<String, ZNRecord> _initialContextMap = new HashMap<>();
   private Set<String> _contextToUpdate = new HashSet<>();
   private Set<String> _contextToRemove = new HashSet<>();
   // The following fields have been added for quota-based task scheduling
@@ -175,6 +178,7 @@ public class TaskDataCache extends AbstractDataCache {
     // TODO: Need an optimize for reading context only if the refresh is needed.
     long start = System.currentTimeMillis();
     _contextMap.clear();
+    _initialContextMap.clear();
     if (_controlContextProvider.getClusterName() == null || _controlContextProvider.getClusterName()
         .equalsIgnoreCase(UNKNOWN_CLUSTER)) {
       return;
@@ -189,7 +193,7 @@ public class TaskDataCache extends AbstractDataCache {
     for (String resourceName : childNames) {
       contextPaths.add(getTaskDataPath(resourceName, TaskDataType.CONTEXT));
     }
-    
+
     List<ZNRecord> contexts = accessor.getBaseDataAccessor().get(contextPaths, null, 0, true);
 
     for (int i = 0; i < contexts.size(); i++) {
@@ -200,6 +204,12 @@ public class TaskDataCache extends AbstractDataCache {
         _contextMap.put(childNames.get(i), context);
         LogUtil.logDebug(LOG, genEventInfo(),
             String.format("Context for %s is null or miss the context NAME!", childNames.get((i))));
+      }
+    }
+
+    for (Map.Entry<String, ZNRecord> entry : _contextMap.entrySet()) {
+      if (entry.getValue() != null) {
+        _initialContextMap.put(entry.getKey(), HelixUtil.deepCopyZNRecord(entry.getValue()));
       }
     }
 
@@ -296,6 +306,10 @@ public class TaskDataCache extends AbstractDataCache {
    * Update context of the Workflow or Job
    */
   private void updateContext(String resourceName, ZNRecord record) {
+    if (_initialContextMap.containsKey(resourceName)
+        && _initialContextMap.get(resourceName).equals(record)) {
+      return;
+    }
     _contextMap.put(resourceName, record);
     _contextToUpdate.add(resourceName);
   }

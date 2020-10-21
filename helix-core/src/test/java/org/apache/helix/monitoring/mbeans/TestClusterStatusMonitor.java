@@ -44,6 +44,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.helix.TestHelper;
+import org.apache.helix.util.HelixUtil;
 import org.apache.helix.zookeeper.datamodel.ZNRecord;
 import org.apache.helix.controller.stages.BestPossibleStateOutput;
 import org.apache.helix.model.BuiltInStateModelDefinitions;
@@ -272,9 +273,9 @@ public class TestClusterStatusMonitor {
 
     ZNRecord idealStateRecord = DefaultIdealStateCalculator
         .calculateIdealState(instances, numPartition, numReplica, testDB, "MASTER", "SLAVE");
-    IdealState idealState = new IdealState(TestResourceMonitor.deepCopyZNRecord(idealStateRecord));
+    IdealState idealState = new IdealState(HelixUtil.deepCopyZNRecord(idealStateRecord));
     idealState.setMinActiveReplicas(numReplica);
-    ExternalView externalView = new ExternalView(TestResourceMonitor.deepCopyZNRecord(idealStateRecord));
+    ExternalView externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
     StateModelDefinition stateModelDef =
         BuiltInStateModelDefinitions.MasterSlave.getStateModelDefinition();
 
@@ -291,7 +292,7 @@ public class TestClusterStatusMonitor {
 
     int lessMinActiveReplica = 6;
     Random r = new Random();
-    externalView = new ExternalView(TestResourceMonitor.deepCopyZNRecord(idealStateRecord));
+    externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
     int start = r.nextInt(numPartition - lessMinActiveReplica - 1);
     for (int i = start; i < start + lessMinActiveReplica; i++) {
       String partition = testDB + "_" + i;
@@ -320,7 +321,7 @@ public class TestClusterStatusMonitor {
     Assert.assertEquals(monitor.getPendingStateTransitionGuage(), 0);
 
     int missTopState = 7;
-    externalView = new ExternalView(TestResourceMonitor.deepCopyZNRecord(idealStateRecord));
+    externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
     start = r.nextInt(numPartition - missTopState - 1);
     for (int i = start; i < start + missTopState; i++) {
       String partition = testDB + "_" + i;
@@ -348,7 +349,7 @@ public class TestClusterStatusMonitor {
     Assert.assertEquals(monitor.getPendingStateTransitionGuage(), 0);
 
     int missReplica = 5;
-    externalView = new ExternalView(TestResourceMonitor.deepCopyZNRecord(idealStateRecord));
+    externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
     start = r.nextInt(numPartition - missReplica - 1);
     for (int i = start; i < start + missReplica; i++) {
       String partition = testDB + "_" + i;

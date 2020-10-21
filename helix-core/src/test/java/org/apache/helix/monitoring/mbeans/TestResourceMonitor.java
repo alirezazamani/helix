@@ -37,6 +37,7 @@ import javax.management.ReflectionException;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.helix.TestHelper;
+import org.apache.helix.util.HelixUtil;
 import org.apache.helix.zookeeper.datamodel.ZNRecord;
 import org.apache.helix.model.BuiltInStateModelDefinitions;
 import org.apache.helix.model.ExternalView;
@@ -68,9 +69,9 @@ public class TestResourceMonitor {
 
       ZNRecord idealStateRecord = DefaultIdealStateCalculator
           .calculateIdealState(instances, _partitions, _replicas - 1, _dbName, "MASTER", "SLAVE");
-      IdealState idealState = new IdealState(deepCopyZNRecord(idealStateRecord));
+      IdealState idealState = new IdealState(HelixUtil.deepCopyZNRecord(idealStateRecord));
       idealState.setMinActiveReplicas(_replicas - 1);
-      ExternalView externalView = new ExternalView(deepCopyZNRecord(idealStateRecord));
+      ExternalView externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
       StateModelDefinition stateModelDef =
           BuiltInStateModelDefinitions.MasterSlave.getStateModelDefinition();
 
@@ -111,7 +112,7 @@ public class TestResourceMonitor {
       Assert.assertEquals(monitor.getMissingTopStatePartitionGauge(), 0);
 
       int lessMinActiveReplica = 6;
-      externalView = new ExternalView(deepCopyZNRecord(idealStateRecord));
+      externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
       start = r.nextInt(_partitions - lessMinActiveReplica - 1);
       for (int i = start; i < start + lessMinActiveReplica; i++) {
         String partition = _dbName + "_" + i;
@@ -142,7 +143,7 @@ public class TestResourceMonitor {
       Assert.assertEquals(monitor.getMissingTopStatePartitionGauge(), 0);
 
       int lessReplica = 4;
-      externalView = new ExternalView(deepCopyZNRecord(idealStateRecord));
+      externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
       start = r.nextInt(_partitions - lessReplica - 1);
       for (int i = start; i < start + lessReplica; i++) {
         String partition = _dbName + "_" + i;
@@ -174,7 +175,7 @@ public class TestResourceMonitor {
       Assert.assertEquals(monitor.getMissingTopStatePartitionGauge(), 0);
 
       int missTopState = 7;
-      externalView = new ExternalView(deepCopyZNRecord(idealStateRecord));
+      externalView = new ExternalView(HelixUtil.deepCopyZNRecord(idealStateRecord));
       start = r.nextInt(_partitions - missTopState - 1);
       for (int i = start; i < start + missTopState; i++) {
         String partition = _dbName + "_" + i;
@@ -269,37 +270,6 @@ public class TestResourceMonitor {
       Assert.assertFalse(mBeanServer.isRegistered(resourceObjectName),
           "Failed to unregister resource monitor.");
     }
-  }
-
-  /**
-   * Return a deep copy of a ZNRecord.
-   *
-   * @return
-   */
-  public static ZNRecord deepCopyZNRecord(ZNRecord record) {
-    ZNRecord copy = new ZNRecord(record.getId());
-
-    copy.getSimpleFields().putAll(record.getSimpleFields());
-    for (String mapKey : record.getMapFields().keySet()) {
-      Map<String, String> mapField = record.getMapFields().get(mapKey);
-      copy.getMapFields().put(mapKey, new TreeMap<>(mapField));
-    }
-
-    for (String listKey : record.getListFields().keySet()) {
-      copy.getListFields().put(listKey, new ArrayList<>(record.getListFields().get(listKey)));
-    }
-    if (record.getRawPayload() != null) {
-      byte[] rawPayload = new byte[record.getRawPayload().length];
-      System.arraycopy(record.getRawPayload(), 0, rawPayload, 0, record.getRawPayload().length);
-      copy.setRawPayload(rawPayload);
-    }
-
-    copy.setVersion(record.getVersion());
-    copy.setCreationTime(record.getCreationTime());
-    copy.setModifiedTime(record.getModifiedTime());
-    copy.setEphemeralOwner(record.getEphemeralOwner());
-
-    return copy;
   }
 
   private void verifyPartitionWeightMetrics(MBeanServerConnection mBeanServer,

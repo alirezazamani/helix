@@ -510,4 +510,34 @@ public final class HelixUtil {
     instanceConfig.setInstanceEnabled(true);
     return instanceConfig;
   }
+
+  /**
+   * Return a deep copy of a ZNRecord.
+   * @return
+   */
+  public static ZNRecord deepCopyZNRecord(ZNRecord record) {
+    ZNRecord copy = new ZNRecord(record.getId());
+
+    copy.getSimpleFields().putAll(record.getSimpleFields());
+    for (String mapKey : record.getMapFields().keySet()) {
+      Map<String, String> mapField = record.getMapFields().get(mapKey);
+      copy.getMapFields().put(mapKey, new TreeMap<>(mapField));
+    }
+
+    for (String listKey : record.getListFields().keySet()) {
+      copy.getListFields().put(listKey, new ArrayList<>(record.getListFields().get(listKey)));
+    }
+    if (record.getRawPayload() != null) {
+      byte[] rawPayload = new byte[record.getRawPayload().length];
+      System.arraycopy(record.getRawPayload(), 0, rawPayload, 0, record.getRawPayload().length);
+      copy.setRawPayload(rawPayload);
+    }
+
+    copy.setVersion(record.getVersion());
+    copy.setCreationTime(record.getCreationTime());
+    copy.setModifiedTime(record.getModifiedTime());
+    copy.setEphemeralOwner(record.getEphemeralOwner());
+
+    return copy;
+  }
 }
