@@ -558,24 +558,10 @@ public abstract class AbstractTaskDispatcher {
     // when making any new assignments.
     // This includes all completed, failed, delayed, and already assigned partitions.
     Set<Integer> excludeSet = Sets.newTreeSet();
-    // Add all assigned partitions to excludeSet
-    for (Set<Integer> assignedSet : assignedPartitions.values()) {
-      excludeSet.addAll(assignedSet);
-    }
-    addCompletedTasks(excludeSet, jobCtx, allPartitions);
-    addPartitionsReachedMaximumRetries(excludeSet, jobCtx, allPartitions, jobCfg);
-    excludeSet.addAll(skippedPartitions);
-    Set<Integer> partitionsWithDelay = TaskUtil.getNonReadyPartitions(jobCtx, currentTime);
-    excludeSet.addAll(partitionsWithDelay);
 
-    // The following is filtering of tasks before passing them to the assigner
-    // Only feed in tasks that need to be assigned (have state equal to null, STOPPED, TIMED_OUT,
-    // TASK_ERROR, or DROPPED) or their assigned participant is not live anymore
-    Set<Integer> filteredTaskPartitionNumbers = filterTasks(allPartitions, jobCtx, liveInstances);
-    // Remove all excludeSet tasks to be safer because some STOPPED tasks have been already
-    // re-started (excludeSet includes already-assigned partitions). Also tasks with their retry
-    // limit exceed (addGiveupPartitions) will be removed as well
-    filteredTaskPartitionNumbers.removeAll(excludeSet);
+    Set<Integer> filteredTaskPartitionNumbers = new HashSet<>();
+    findReadyAndExcludedPartitions(allPartitions, liveInstances, jobCfg, jobCtx, assignedPartitions,
+        skippedPartitions, excludeSet, filteredTaskPartitionNumbers, currentTime);
 
     Set<Integer> partitionsToRetryOnLiveInstanceChangeForTargetedJob = new HashSet<>();
     // If the job is a targeted job, in case of live instance change, we need to assign
@@ -588,7 +574,7 @@ public abstract class AbstractTaskDispatcher {
       for (int partitionNum : allPartitions) {
         TaskPartitionState taskPartitionState = jobCtx.getPartitionState(partitionNum);
         if (isTaskNotInTerminalState(taskPartitionState)
-            && !partitionsWithDelay.contains(partitionNum)
+            && !TaskUtil.getNonReadyPartitions(jobCtx, currentTime).contains(partitionNum)
             && !isTaskGivenup(jobCtx, jobCfg, partitionNum)) {
           // Some targeted tasks may have timed-out due to Participants (instances) not being
           // live, so we give tasks like these another try
@@ -830,6 +816,62 @@ public abstract class AbstractTaskDispatcher {
       }
     }
     return filteredTasks;
+  }
+
+  public void findReadyAndExcludedPartitions(Iterable<Integer> allPartitions,
+      Collection<String> liveInstances, JobConfig jobConfig, JobContext jobContext,
+      Map<String, Set<Integer>> assignedPartitions, Set<Integer> skippedPartitions,
+      Set<Integer> excludeSet, Set<Integer> filteredTaskPartitionNumbers, final long currentTime) {
+
+    // Add all assigned partitions to excludeSet. These tasks have been assigned in previous stages
+    // and should not be reassigned here
+    for (Set<Integer> assignedSet : assignedPartitions.values()) {
+      excludeSet.addAll(assignedSet);
+    }
+
+    Set<Integer> delayedPartitions = TaskUtil.getNonReadyPartitions(jobContext, currentTime);
+
+    for (int partitionNumber : allPartitions) {
+      TaskPartitionState state = jobContext.getPartitionState(partitionNumber);
+      if (isTaskNotInTerminalState(state)) {
+        String assignedParticipant = jobContext.getAssignedParticipant(partitionNumber);
+        if (assignedParticipant != null && !liveInstances.contains(assignedParticipant)) {
+          // The assigned instance is no longer live, so mark it as DROPPED in the context
+          jobContext.setPartitionState(partitionNumber, TaskPartitionState.DROPPED);
+          filteredTaskPartitionNumbers.add(partitionNumber);
+        }
+      }
+
+      if (delayedPartitions.contains(partitionNumber)) {
+        excludeSet.add(partitionNumber);
+        continue;
+      }
+
+      if (jobContext.getPartitionNumAttempts(partitionNumber) >= jobConfig
+          .getMaxAttemptsPerTask()) {
+        excludeSet.add(partitionNumber);
+        continue;
+      }
+
+      if (skippedPartitions.contains(partitionNumber)) {
+        excludeSet.add(partitionNumber);
+        continue;
+      }
+
+      if (excludeSet.contains(partitionNumber)) {
+        continue;
+      }
+
+      if (state == null) {
+        filteredTaskPartitionNumbers.add(partitionNumber);
+      } else if (state == TaskPartitionState.COMPLETED || state == TaskPartitionState.TASK_ABORTED
+          || state == TaskPartitionState.ERROR) {
+        excludeSet.add(partitionNumber);
+      } else if (state == TaskPartitionState.STOPPED || state == TaskPartitionState.TIMED_OUT
+          || state == TaskPartitionState.TASK_ERROR || state == TaskPartitionState.DROPPED) {
+        filteredTaskPartitionNumbers.add(partitionNumber);
+      }
+    }
   }
 
   /**
