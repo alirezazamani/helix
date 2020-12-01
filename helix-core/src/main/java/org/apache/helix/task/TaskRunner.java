@@ -73,7 +73,7 @@ public class TaskRunner implements Runnable {
         throw death;
       } catch (Throwable t) {
         LOG.error("Problem running the task, report task as FAILED.", t);
-        _result = new TaskResult(Status.FAILED, "Exception happened in running task: " + t.getMessage());
+        _result = new TaskResult(Status.FAILED, "Exception happened in running task.");
       }
 
       switch (_result.getStatus()) {
@@ -101,7 +101,7 @@ public class TaskRunner implements Runnable {
     } catch (Exception e) {
       LOG.error("Problem running the task, report task as FAILED.", e);
       _result =
-          new TaskResult(Status.FAILED, "Exception happened in running task: " + e.getMessage());
+          new TaskResult(Status.FAILED, "Exception happened in running task.");
       requestStateTransition(TaskPartitionState.TASK_ERROR);
     } finally {
       synchronized (_doneSync) {
