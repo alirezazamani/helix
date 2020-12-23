@@ -143,8 +143,8 @@ public class TestGetLastScheduledTaskExecInfo extends TaskTestBase {
         JobContext jobContext = _driver.getJobContext(job);
         Set<Integer> allPartitions = jobContext.getPartitionSet();
         for (Integer partition : allPartitions) {
-          String timestamp = jobContext.getMapField(partition).get(TASK_START_TIME_KEY);
-          if (timestamp != null) {
+          long timestamp = jobContext.getPartitionStartTime(partition);
+          if (timestamp != WorkflowContext.NOT_STARTED) {
             scheduleTask++;
           }
         }
@@ -161,11 +161,11 @@ public class TestGetLastScheduledTaskExecInfo extends TaskTestBase {
       JobContext jobContext = _driver.getJobContext(job);
       Set<Integer> allPartitions = jobContext.getPartitionSet();
       for (Integer partition : allPartitions) {
-        String timestamp = jobContext.getMapField(partition).get(TASK_START_TIME_KEY);
-        if (timestamp == null) {
+        long timestamp = jobContext.getPartitionStartTime(partition);
+        if (timestamp == WorkflowContext.NOT_STARTED) {
           startTimes.add(INVALID_TIMESTAMP);
         } else {
-          startTimes.add(Long.parseLong(timestamp));
+          startTimes.add(timestamp);
         }
       }
     }

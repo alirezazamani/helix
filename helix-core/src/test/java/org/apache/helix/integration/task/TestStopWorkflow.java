@@ -35,6 +35,7 @@ import org.apache.helix.task.TaskCallbackContext;
 import org.apache.helix.task.TaskConfig;
 import org.apache.helix.task.TaskDriver;
 import org.apache.helix.task.TaskFactory;
+import org.apache.helix.task.TaskPartitionState;
 import org.apache.helix.task.TaskResult;
 import org.apache.helix.task.TaskState;
 import org.apache.helix.task.TaskStateModelFactory;
@@ -211,8 +212,8 @@ public class TestStopWorkflow extends TaskTestBase {
       _driver.pollForJobState(workflowName_1, jobName, TaskState.IN_PROGRESS);
       boolean isTaskInRunningState = TestHelper.verify(() -> {
         JobContext jobContext = _driver.getJobContext(jobName);
-        String state = jobContext.getMapField(0).get("STATE");
-        return (state!= null && state.equals("RUNNING"));
+        TaskPartitionState state = jobContext.getPartitionState(0);
+        return (state!= null && state.equals(TaskPartitionState.RUNNING));
       }, TestHelper.WAIT_DURATION);
       Assert.assertTrue(isTaskInRunningState);
     }
@@ -229,8 +230,8 @@ public class TestStopWorkflow extends TaskTestBase {
       _driver.pollForJobState(workflowName_1, jobName, TaskState.IN_PROGRESS);
       boolean isTaskInRunningState = TestHelper.verify(() -> {
         JobContext jobContext = _driver.getJobContext(jobName);
-        String state = jobContext.getMapField(0).get("STATE");
-        return (state!= null && state.equals("RUNNING"));
+        TaskPartitionState state = jobContext.getPartitionState(0);
+        return (state!= null && state.equals(TaskPartitionState.RUNNING));
       }, TestHelper.WAIT_DURATION);
       Assert.assertTrue(isTaskInRunningState);
     }

@@ -1298,11 +1298,10 @@ public class TaskDriver {
           if (jobContext != null) {
             Set<Integer> allPartitions = jobContext.getPartitionSet();
             for (Integer partition : allPartitions) {
-              String startTime = jobContext.getMapField(partition).get(TASK_START_TIME_KEY);
-              if (startTime != null) {
-                long startTimeLong = Long.parseLong(startTime);
-                if (startTimeLong > lastScheduledTaskTimestamp) {
-                  lastScheduledTaskTimestamp = startTimeLong;
+              long startTime = jobContext.getPartitionStartTime(partition);
+              if (startTime != WorkflowContext.NOT_STARTED) {
+                if (startTime > lastScheduledTaskTimestamp) {
+                  lastScheduledTaskTimestamp = startTime;
                   jobName = jobState.getKey();
                   taskPartitionIndex = partition;
                   state = jobContext.getPartitionState(partition);

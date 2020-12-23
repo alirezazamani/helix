@@ -19,6 +19,7 @@ package org.apache.helix.task;
  * under the License.
  */
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -204,7 +205,7 @@ public class JobContext extends HelixProperty {
         partitions.add(pId);
       }
     }
-    return result;
+    return Collections.unmodifiableMap(result);
   }
 
   public Set<Integer> getPartitionSet() {
@@ -212,7 +213,7 @@ public class JobContext extends HelixProperty {
     for (String pName : _record.getMapFields().keySet()) {
       partitions.add(Integer.valueOf(pName));
     }
-    return partitions;
+    return Collections.unmodifiableSet(partitions);
   }
 
   public void setTaskIdForPartition(int p, String taskId) {
@@ -234,7 +235,7 @@ public class JobContext extends HelixProperty {
         partitionMap.put(map.get(ContextProperties.TASK_ID.toString()), pId);
       }
     }
-    return partitionMap;
+    return Collections.unmodifiableMap(partitionMap);
   }
 
   public void setAssignedParticipant(int p, String participantName) {
@@ -300,7 +301,7 @@ public class JobContext extends HelixProperty {
    * @param p
    * @return mapField for the partition, NULL if the partition has not scheduled yet.
    */
-  public Map<String, String> getMapField(int p) {
+  private Map<String, String> getMapField(int p) {
     return getMapField(p, false);
   }
 
