@@ -213,7 +213,7 @@ public class JobContext extends HelixProperty {
     for (String pName : _record.getMapFields().keySet()) {
       partitions.add(Integer.valueOf(pName));
     }
-    return Collections.unmodifiableSet(partitions);
+    return partitions;
   }
 
   public void setTaskIdForPartition(int p, String taskId) {
