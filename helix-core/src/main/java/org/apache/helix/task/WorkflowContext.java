@@ -53,11 +53,15 @@ public class WorkflowContext extends HelixProperty {
   public static final int NOT_STARTED = -1;
   public static final int UNFINISHED = -1;
 
+  private boolean hasChanged;
+
   public WorkflowContext(ZNRecord record) {
     super(record);
+    hasChanged = false;
   }
 
   public void setWorkflowState(TaskState s) {
+    hasChanged = true;
     String workflowState = _record.getSimpleField(WorkflowContextProperties.STATE.name());
     if (workflowState == null) {
       _record.setSimpleField(WorkflowContextProperties.STATE.name(), s.name());
@@ -77,6 +81,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   public void setJobState(String job, TaskState s) {
+    hasChanged = true;
     Map<String, String> states = _record.getMapField(WorkflowContextProperties.JOB_STATES.name());
     if (states == null) {
       states = new TreeMap<String, String>();
@@ -86,6 +91,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   protected void removeJobStates(Set<String> jobs) {
+    hasChanged = true;
     Map<String, String> states = _record.getMapField(WorkflowContextProperties.JOB_STATES.name());
     if (states != null) {
       states.keySet().removeAll(jobs);
@@ -108,6 +114,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   protected void setJobStartTime(String job, long time) {
+    hasChanged = true;
     Map<String, String> startTimes =
         _record.getMapField(WorkflowContextProperties.StartTime.name());
     if (startTimes == null) {
@@ -118,6 +125,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   protected void removeJobStartTime(Set<String> jobs) {
+    hasChanged = true;
     Map<String, String> startTimes =
         _record.getMapField(WorkflowContextProperties.StartTime.name());
     if (startTimes != null) {
@@ -174,6 +182,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   public void setStartTime(long t) {
+    hasChanged = true;
     _record.setSimpleField(WorkflowContextProperties.START_TIME.name(), String.valueOf(t));
   }
 
@@ -187,6 +196,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   public void setFinishTime(long t) {
+    hasChanged = true;
     _record.setSimpleField(WorkflowContextProperties.FINISH_TIME.name(), String.valueOf(t));
   }
 
@@ -200,6 +210,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   public void setLastScheduledSingleWorkflow(String workflow) {
+    hasChanged = true;
     _record.setSimpleField(WorkflowContextProperties.LAST_SCHEDULED_WORKFLOW.name(), workflow);
     // Record scheduled workflow into the history list as well
     List<String> workflows = getScheduledWorkflows();
@@ -215,6 +226,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   protected void setLastJobPurgeTime(long epochTime) {
+    hasChanged = true;
     _record.setSimpleField(WorkflowContextProperties.LAST_PURGE_TIME.name(),
         String.valueOf(epochTime));
   }
@@ -228,10 +240,15 @@ public class WorkflowContext extends HelixProperty {
   }
 
   public void setName(String name) {
+    hasChanged = true;
     _record.setSimpleField(WorkflowContextProperties.NAME.name(), name);
   }
 
   public String getName() {
     return _record.getSimpleField(WorkflowContextProperties.NAME.name());
+  }
+
+  public boolean isContextChanged() {
+    return hasChanged;
   }
 }

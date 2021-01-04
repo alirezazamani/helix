@@ -51,11 +51,15 @@ public class JobContext extends HelixProperty {
     EXECUTION_START_TIME, // Time at which the first task of this job got scheduled
   }
 
+  private boolean hasChanged;
+
   public JobContext(ZNRecord record) {
     super(record);
+    hasChanged = false;
   }
 
   public void setStartTime(long t) {
+    hasChanged = true;
     _record.setSimpleField(ContextProperties.START_TIME.toString(), String.valueOf(t));
   }
 
@@ -68,6 +72,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setFinishTime(long t) {
+    hasChanged = true;
     _record.setSimpleField(ContextProperties.FINISH_TIME.toString(), String.valueOf(t));
   }
 
@@ -80,6 +85,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setInfo(String info) {
+    hasChanged = true;
     if (info != null) {
       _record.setSimpleField(ContextProperties.INFO.toString(), info);
     }
@@ -90,6 +96,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setPartitionState(int p, TaskPartitionState s) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.STATE.toString(), s.name());
   }
@@ -108,11 +115,13 @@ public class JobContext extends HelixProperty {
   }
 
   public void setPartitionNumAttempts(int p, int n) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.NUM_ATTEMPTS.toString(), String.valueOf(n));
   }
 
   public int incrementNumAttempts(int pId) {
+    hasChanged = true;
     int n = this.getPartitionNumAttempts(pId);
     if (n < 0) {
       n = 0;
@@ -135,6 +144,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setPartitionStartTime(int p, long t) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.START_TIME.toString(), String.valueOf(t));
   }
@@ -152,6 +162,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setPartitionFinishTime(int p, long t) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.FINISH_TIME.toString(), String.valueOf(t));
   }
@@ -169,6 +180,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setPartitionTarget(int p, String targetPName) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.TARGET.toString(), targetPName);
   }
@@ -179,6 +191,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setPartitionInfo(int p, String info) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.INFO.toString(), info);
   }
@@ -217,6 +230,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setTaskIdForPartition(int p, String taskId) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.TASK_ID.toString(), taskId);
   }
@@ -239,6 +253,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setAssignedParticipant(int p, String participantName) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.ASSIGNED_PARTICIPANT.toString(), participantName);
   }
@@ -249,6 +264,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setNextRetryTime(int p, long t) {
+    hasChanged = true;
     Map<String, String> map = getMapField(p, true);
     map.put(ContextProperties.NEXT_RETRY_TIME.toString(), String.valueOf(t));
   }
@@ -266,6 +282,7 @@ public class JobContext extends HelixProperty {
   }
 
   public void setName(String name) {
+    hasChanged = true;
     _record.setSimpleField(ContextProperties.NAME.name(), name);
   }
 
@@ -282,6 +299,7 @@ public class JobContext extends HelixProperty {
    * @param t
    */
   public void setExecutionStartTime(long t) {
+    hasChanged = true;
     String tStr = _record.getSimpleField(ContextProperties.EXECUTION_START_TIME.toString());
     if (tStr == null) {
       _record.setSimpleField(ContextProperties.EXECUTION_START_TIME.toString(), String.valueOf(t));
@@ -309,6 +327,7 @@ public class JobContext extends HelixProperty {
     String pStr = String.valueOf(p);
     Map<String, String> map = _record.getMapField(pStr);
     if (map == null && createIfNotPresent) {
+      hasChanged = true;
       map = new TreeMap<>();
       _record.setMapField(pStr, map);
     }
@@ -320,6 +339,11 @@ public class JobContext extends HelixProperty {
    * @param partitionSeqNumber
    */
   public void removePartition(int partitionSeqNumber) {
+    hasChanged = true;
     _record.getMapFields().remove(String.valueOf(partitionSeqNumber));
+  }
+
+  public boolean isContextChanged() {
+    return hasChanged;
   }
 }
