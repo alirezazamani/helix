@@ -21,25 +21,29 @@ package org.apache.helix.integration.task;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import org.apache.helix.AccessOption;
 import org.apache.helix.HelixDataAccessor;
+import org.apache.helix.HelixProperty;
 import org.apache.helix.PropertyKey;
 import org.apache.helix.SystemPropertyKeys;
 import org.apache.helix.TestHelper;
 import org.apache.helix.ZkTestHelper;
+import org.apache.helix.model.CurrentState;
 import org.apache.helix.model.MasterSlaveSMD;
 import org.apache.helix.task.JobConfig;
 import org.apache.helix.task.JobQueue;
 import org.apache.helix.task.TaskState;
 import org.apache.helix.task.TaskUtil;
+import org.apache.helix.zookeeper.datamodel.ZNRecord;
 import org.apache.helix.zookeeper.impl.client.ZkClient;
+import org.apache.zookeeper.data.Stat;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 
 /**
- * This test makes sure that the Current State of the task are being removed after participant
- * handles new session.
+ * This test makes sure that the Current State of the task are being created on correct paths.
  */
 public class TestTaskCurrentStatePathDisabled extends TaskTestBase {
   private static final String DATABASE = WorkflowGenerator.DEFAULT_TGT_DB;
@@ -72,10 +76,15 @@ public class TestTaskCurrentStatePathDisabled extends TaskTestBase {
     ZkClient clientP0 = (ZkClient) _participants[0].getZkClient();
     String sessionIdP0 = ZkTestHelper.getSessionId(clientP0);
     PropertyKey.Builder keyBuilder = _manager.getHelixDataAccessor().keyBuilder();
-    Assert.assertNotNull(_manager.getHelixDataAccessor()
-        .getProperty(keyBuilder.taskCurrentState(instanceP0, sessionIdP0, namespacedJobName0)));
-    Assert.assertNull(_manager.getHelixDataAccessor()
-        .getProperty(keyBuilder.currentState(instanceP0, sessionIdP0, namespacedJobName0)));
+
+    boolean isCurrentStateOnCorrectPath = TestHelper.verify(() -> {
+      HelixProperty taskCurrentState = _manager.getHelixDataAccessor()
+          .getProperty(keyBuilder.taskCurrentState(instanceP0, sessionIdP0, namespacedJobName0));
+      HelixProperty currentState = _manager.getHelixDataAccessor()
+          .getProperty(keyBuilder.currentState(instanceP0, sessionIdP0, namespacedJobName0));
+      return (taskCurrentState != null && currentState == null);
+    }, TestHelper.WAIT_DURATION);
+    Assert.assertTrue(isCurrentStateOnCorrectPath);
 
     // Test the case when the task current state path is disabled
     String jobQueueName1 = TestHelper.getTestMethodName() + "_1";
@@ -91,10 +100,14 @@ public class TestTaskCurrentStatePathDisabled extends TaskTestBase {
     _driver.start(jobQueue1.build());
     String namespacedJobName1 = TaskUtil.getNamespacedJobName(jobQueueName1, "JOB1");
     _driver.pollForJobState(jobQueueName1, namespacedJobName1, TaskState.IN_PROGRESS);
-    Assert.assertNull(_manager.getHelixDataAccessor()
-        .getProperty(keyBuilder.taskCurrentState(instanceP0, sessionIdP0, namespacedJobName1)));
-    Assert.assertNotNull(_manager.getHelixDataAccessor()
-        .getProperty(keyBuilder.currentState(instanceP0, sessionIdP0, namespacedJobName1)));
+    isCurrentStateOnCorrectPath = TestHelper.verify(() -> {
+      HelixProperty taskCurrentState = _manager.getHelixDataAccessor()
+          .getProperty(keyBuilder.taskCurrentState(instanceP0, sessionIdP0, namespacedJobName1));
+      HelixProperty currentState = _manager.getHelixDataAccessor()
+          .getProperty(keyBuilder.currentState(instanceP0, sessionIdP0, namespacedJobName1));
+      return (taskCurrentState == null && currentState != null);
+    }, TestHelper.WAIT_DURATION);
+    Assert.assertTrue(isCurrentStateOnCorrectPath);
     System.setProperty(SystemPropertyKeys.TASK_CURRENT_STATE_PATH_DISABLED, "false");
   }
 }
