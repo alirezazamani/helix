@@ -261,7 +261,7 @@ public class TaskDataCache extends AbstractDataCache {
    * Update context of the Workflow
    */
   public void updateWorkflowContext(String resourceName, WorkflowContext workflowContext) {
-    if (!_contextMap.containsKey(resourceName) || workflowContext.isContextChanged()) {
+    if (!_contextMap.containsKey(resourceName) || workflowContext.hasWorkflowContextModified()) {
       updateContext(resourceName, workflowContext.getRecord());
     }
   }
