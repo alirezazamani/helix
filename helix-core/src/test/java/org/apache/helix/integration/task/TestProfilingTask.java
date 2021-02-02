@@ -75,8 +75,7 @@ public class TestProfilingTask extends TaskTestBase {
         new Workflow.Builder(workflowName).addJob(jobName, jobBuilder1);
     _driver.start(workflowBuilder1.build());
 
-    _driver.pollForJobState(workflowName, TaskUtil.getNamespacedJobName(workflowName, jobName),
-        TaskState.IN_PROGRESS);
+    _controller.syncStop();
 
     // Add short running task
     for (int i = 0; i < 100; i++) {
