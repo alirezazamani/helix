@@ -23,10 +23,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.helix.AccessOption;
 import org.apache.helix.HelixException;
 import org.apache.helix.TestHelper;
 import org.apache.helix.integration.manager.ClusterControllerManager;
+import org.apache.helix.manager.zk.ZNRecordStreamingSerializer;
 import org.apache.helix.model.ClusterConfig;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.model.MasterSlaveSMD;
@@ -53,8 +57,9 @@ public class TestProfilingTask extends TaskTestBase {
 
   @BeforeClass
   public void beforeClass() throws Exception {
-    _numNodes = 300;
+    _numNodes = 3;
     super.beforeClass();
+    _controller.syncStop();
   }
 
   @AfterClass
@@ -64,25 +69,31 @@ public class TestProfilingTask extends TaskTestBase {
 
   @Test
   public void TestProfilingTaskAddTaskOneByOne() throws Exception {
+    ZNRecordStreamingSerializer serializer = new ZNRecordStreamingSerializer();
+    String generatedString = RandomStringUtils.random(60, true, true);
+
     String workflowName = TestHelper.getTestMethodName();
-    String jobName = "JOB0";
+    String jobName = generatedString;
 
     JobConfig.Builder jobBuilder1 = new JobConfig.Builder().setWorkflow(workflowName)
         .setNumberOfTasks(1).setNumConcurrentTasksPerInstance(100).setCommand(MockTask.TASK_COMMAND)
+        .setDisableExternalView(false).setExpiry(9223372036854774L).setFailureThreshold(322).setMaxAttemptsPerTask(2147483647).setMaxAttemptsPerTask(2147483647).setRebalanceRunningTask(false).setTimeoutPerTask(9223372036854774000L)
+        .setIgnoreDependentJobFailure(false)
         .setJobCommandConfigMap(ImmutableMap.of(MockTask.JOB_DELAY, "99999999"));
 
     Workflow.Builder workflowBuilder1 =
         new Workflow.Builder(workflowName).addJob(jobName, jobBuilder1);
     _driver.start(workflowBuilder1.build());
 
-    _controller.syncStop();
-
     // Add short running task
-    for (int i = 0; i < 100; i++) {
+    for (int i = 1; i < 10000; i++) {
       Map<String, String> newTaskConfig =
-          new HashMap<String, String>(ImmutableMap.of(MockTask.JOB_DELAY, "99999999"));
+          new HashMap<String, String>(ImmutableMap.of("TASK_SUCCESS_OPTIONAL", "true", RandomStringUtils.random(38, true, true),
+              RandomStringUtils.random(273, true, true), "job.name", generatedString, "task.id",
+              generatedString + "_" + RandomStringUtils.random(3, false, true)));
       TaskConfig task = new TaskConfig(null, newTaskConfig, null, null);
       _driver.addTask(workflowName, jobName, task);
+      System.out.println(i + " " + serializer.serialize(_driver.getJobConfig(TaskUtil.getNamespacedJobName(workflowName,jobName)).getRecord()).length);
     }
     Thread.sleep(500000000000L);
   }
