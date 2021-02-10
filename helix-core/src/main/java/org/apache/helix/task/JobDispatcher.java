@@ -163,7 +163,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       if (jobTgtState == TargetState.STOP) {
         // If the assigned instance is no longer live, so mark it as DROPPED in the context
         markPartitionsWithoutLiveInstance(jobCtx, liveInstances);
-        
+
         if (jobState != TaskState.NOT_STARTED && TaskUtil.checkJobStopped(jobCtx)) {
           workflowCtx.setJobState(jobName, TaskState.STOPPED);
         } else {
@@ -263,7 +263,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
         || (jobCfg.getTargetResource() != null
             && cache.getIdealState(jobCfg.getTargetResource()) != null
             && !cache.getIdealState(jobCfg.getTargetResource()).isEnabled())) {
-      if (isJobFinished(jobCtx, jobResource, currStateOutput)) {
+      if (isJobFinished(jobCtx)) {
         failJob(jobResource, workflowCtx, jobCtx, workflowConfig, cache.getJobConfigMap(), cache);
         return buildEmptyAssignment(jobResource, currStateOutput);
       }
@@ -287,7 +287,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       return toResourceAssignment(jobResource, paMap);
     }
 
-    if (jobState == TaskState.FAILING && isJobFinished(jobCtx, jobResource, currStateOutput)) {
+    if (jobState == TaskState.FAILING && isJobFinished(jobCtx)) {
       failJob(jobResource, workflowCtx, jobCtx, workflowConfig, cache.getJobConfigMap(), cache);
       return buildEmptyAssignment(jobResource, currStateOutput);
     }
@@ -308,7 +308,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
     // If job is being timed out and no task is running (for whatever reason), idealState can be
     // deleted and all tasks
     // can be dropped(note that Helix doesn't track whether the drop is success or not).
-    if (jobState == TaskState.TIMING_OUT && isJobFinished(jobCtx, jobResource, currStateOutput)) {
+    if (jobState == TaskState.TIMING_OUT && isJobFinished(jobCtx)) {
       handleJobTimeout(jobCtx, workflowCtx, jobResource, jobCfg);
       finishJobInRuntimeJobDag(cache.getTaskDataCache(), workflowConfig.getWorkflowId(),
           jobResource);
@@ -343,17 +343,10 @@ public class JobDispatcher extends AbstractTaskDispatcher {
     return ra;
   }
 
-  private boolean isJobFinished(JobContext jobContext, String jobResource,
-      CurrentStateOutput currentStateOutput) {
+  private boolean isJobFinished(JobContext jobContext) {
     for (int pId : jobContext.getPartitionSet()) {
       TaskPartitionState state = jobContext.getPartitionState(pId);
-      Partition partition = new Partition(pName(jobResource, pId));
-      String instance = jobContext.getAssignedParticipant(pId);
-      Message pendingMessage =
-          currentStateOutput.getPendingMessage(jobResource, partition, instance);
-      // If state is INIT but is pending INIT->RUNNING, it's not yet safe to say the job finished
-      if (state == TaskPartitionState.RUNNING
-          || (state == TaskPartitionState.INIT && pendingMessage != null)) {
+      if (state == TaskPartitionState.RUNNING || state == TaskPartitionState.INIT) {
         return false;
       }
     }
