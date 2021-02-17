@@ -63,6 +63,7 @@ public class WorkflowContext extends HelixProperty {
   }
 
   public void setWorkflowState(TaskState s) {
+    System.out.println("setWorkflowState " + s.name());
     TaskState workflowState = getWorkflowState();
     if ((!TaskConstants.FINAL_STATES.contains(workflowState) && !s.equals(workflowState))) {
       _record.setSimpleField(WorkflowContextProperties.STATE.name(), s.name());
