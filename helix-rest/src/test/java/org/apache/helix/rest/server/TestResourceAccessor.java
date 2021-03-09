@@ -376,10 +376,31 @@ public class TestResourceAccessor extends AbstractTestClass {
   }
 
   /**
-   * Test "delete" command of updateResourceConfig.
+   * Test "update" command of updateResourceConfig for a path that does not exists.
    * @throws Exception
    */
   @Test(dependsOnMethods = "updateResourceConfig")
+  public void updateNonExistentResourceConfig() throws Exception {
+    // An invalid input which does not have any ID
+    String dummyInput = "{\"simpleFields\":{}}";
+
+    String dummyResourceName = "RESOURCE_TEST_DUMMY";
+    // Update the path with dummy input
+    Entity entity = Entity.entity(dummyInput, MediaType.APPLICATION_JSON_TYPE);
+    post("clusters/" + CLUSTER_NAME + "/resources/" + dummyResourceName + "/configs", null, entity,
+        Response.Status.OK.getStatusCode());
+    ResourceConfig resourceConfig =
+        _configAccessor.getResourceConfig(CLUSTER_NAME, dummyResourceName);
+    // Since the path does not exists, update should not create the ZNRecord
+    Assert.assertNull(resourceConfig);
+    System.out.println("End test :" + TestHelper.getTestMethodName());
+  }
+
+  /**
+   * Test "delete" command of updateResourceConfig.
+   * @throws Exception
+   */
+  @Test(dependsOnMethods = "updateNonExistentResourceConfig")
   public void deleteFromResourceConfig() throws Exception {
     ZNRecord record = new ZNRecord(RESOURCE_NAME);
 

@@ -891,7 +891,7 @@ public class ConfigAccessor {
     if (overwrite) {
       ZKUtil.createOrReplace(_zkClient, zkPath, resourceConfig.getRecord(), true);
     } else {
-      ZKUtil.createOrUpdate(_zkClient, zkPath, resourceConfig.getRecord(), true, true);
+      ZKUtil.updateIfExists(_zkClient, zkPath, resourceConfig.getRecord(), true);
     }
   }
 
