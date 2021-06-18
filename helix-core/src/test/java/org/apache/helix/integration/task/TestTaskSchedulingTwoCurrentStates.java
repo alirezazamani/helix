@@ -117,7 +117,7 @@ public class TestTaskSchedulingTwoCurrentStates extends TaskTestBase {
     JobConfig.Builder jobBuilder0 =
         new JobConfig.Builder().setWorkflow(jobQueueName).setTargetResource(DATABASE)
             .setTargetPartitionStates(Sets.newHashSet(MasterSlaveSMD.States.MASTER.name()))
-            .setCommand(MockTask.TASK_COMMAND)
+            .setCommand(MockTask.TASK_COMMAND).setTimeout(30000L).setTaskRetryDelay(10000L).setMaxAttemptsPerTask(3)
             .setJobCommandConfigMap(ImmutableMap.of(MockTask.JOB_DELAY, "10000"));
 
     JobQueue.Builder jobQueue = TaskTestUtil.buildJobQueue(jobQueueName);
@@ -154,6 +154,10 @@ public class TestTaskSchedulingTwoCurrentStates extends TaskTestBase {
       return (participant.equals(PARTICIPANT_PREFIX + "_" + (_startPort + 1)));
     }, TestHelper.WAIT_DURATION);
     Assert.assertTrue(isTaskAssignedToMasterNode);
+
+    _gSetupTool.getClusterManagementTool().dropResource(CLUSTER_NAME, DATABASE);
+
+    Thread.sleep(500000000L);
 
     String instanceP0 = PARTICIPANT_PREFIX + "_" + (_startPort + 0);
     ZkClient clientP0 = (ZkClient) _participants[0].getZkClient();
