@@ -1031,14 +1031,14 @@ public class TaskUtil {
   }
 
   /**
-   * Check whether tasks are just started or still running
+   * Check whether tasks are just started or still active
    * @param jobContext The job context
    * @return False if still tasks not in final state. Otherwise return true
    */
   public static boolean checkJobStopped(JobContext jobContext) {
     for (int partition : jobContext.getPartitionSet()) {
       TaskPartitionState taskState = jobContext.getPartitionState(partition);
-      if (taskState == TaskPartitionState.RUNNING) {
+      if (taskState == TaskPartitionState.INIT || taskState == TaskPartitionState.RUNNING) {
         return false;
       }
     }

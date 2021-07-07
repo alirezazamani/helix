@@ -292,7 +292,7 @@ public abstract class AbstractTaskDispatcher {
           // ensure that this task then goes from INIT to DROPPED so that it will be released from
           // AssignableInstance to prevent resource leak
           if (jobState == TaskState.TIMED_OUT || jobState == TaskState.TIMING_OUT
-              || jobTgtState == TargetState.DELETE) {
+              || jobTgtState == TargetState.DELETE || jobTgtState == TargetState.STOP) {
             // Job is timed out or timing out or targetState is to be deleted, so its tasks will be
             // sent back to INIT
             // In this case, tasks' IdealState will be removed, and they will be sent to DROPPED
@@ -300,7 +300,7 @@ public abstract class AbstractTaskDispatcher {
 
             assignedPartitions.get(instance).add(pId);
             paMap.put(pId, new PartitionAssignment(instance, TaskPartitionState.DROPPED.name()));
-
+            jobCtx.setPartitionState(pId, TaskPartitionState.DROPPED);
             // Also release resources for these tasks
             assignableInstanceManager.release(instance, taskConfig, quotaType);
             break;
@@ -364,23 +364,9 @@ public abstract class AbstractTaskDispatcher {
     if (currentStateString == null) {
       // Task state is either DROPPED or INIT
       TaskPartitionState stateFromContext = jobCtx.getPartitionState(pId);
-      // If jobTgtState is START: Since currentstate is null, this function will return INIT to
-      // start the task or it will return the stateFromContext (the current context) and there is no
-      // need to update the context.
-      // If jobTgtState is DELETE: JobDispatcher handles this case and this part of the code will
-      // not be triggered.
-      // If jobTgtState is STOP:
-      // If context is equal to INIT or RUNNING: Here context is set to be STOPPED.
-      // Other states don't need special handling and context can remain unchanged.
-      if (jobTgtState == TargetState.STOP && (stateFromContext == TaskPartitionState.RUNNING
-          || stateFromContext == TaskPartitionState.INIT)) {
-        jobCtx.setPartitionState(pId, TaskPartitionState.STOPPED);
-        return TaskPartitionState.STOPPED;
-      }
       return stateFromContext == null ? TaskPartitionState.INIT : stateFromContext;
     }
-    TaskPartitionState currentState = TaskPartitionState.valueOf(currentStateString);
-    return currentState;
+    return TaskPartitionState.valueOf(currentStateString);
   }
 
   /**
