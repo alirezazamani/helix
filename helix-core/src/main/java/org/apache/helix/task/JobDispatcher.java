@@ -61,6 +61,9 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       LOG.error("Job configuration is NULL for {}", jobName);
       return buildEmptyAssignment(jobName, currStateOutput);
     }
+
+    System.out.println("processJobStatusUpdateAndAssignment " + jobName + " " + workflowCtx.getWorkflowState() + " " + workflowCtx.getJobState(jobName));
+
     String workflowResource = jobCfg.getWorkflow();
 
     // Fetch workflow configuration and context
@@ -163,7 +166,7 @@ public class JobDispatcher extends AbstractTaskDispatcher {
       if (jobTgtState == TargetState.STOP) {
         // If the assigned instance is no longer live, so mark it as DROPPED in the context
         markPartitionsWithoutLiveInstance(jobCtx, liveInstances);
-        
+
         if (jobState != TaskState.NOT_STARTED && TaskUtil.checkJobStopped(jobCtx)) {
           workflowCtx.setJobState(jobName, TaskState.STOPPED);
         } else {

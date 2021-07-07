@@ -71,6 +71,8 @@ public class WorkflowDispatcher extends AbstractTaskDispatcher {
       return;
     }
 
+    System.out.println("updateWorkflowStatus " + workflow + " " + workflowCtx.getWorkflowState() + " " + workflowCfg.getTargetState());
+
     // Step 1: Check for deletion - if so, we don't need to go through further steps
     // Clean up if workflow marked for deletion
     TargetState targetState = workflowCfg.getTargetState();
